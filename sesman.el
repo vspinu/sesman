@@ -61,21 +61,17 @@ Each element is of the form (key cxt-type cxt-value) where
 (defun sesman-start ()
   "Start sesman session."
   (interactive)
-  (let* ((system (sesman--system))
-         (session (sesman-start-session system)))
-    (sesman-register system session)
-    (message "Started %s" (car session))))
+  (let* ((system (sesman--system)))
+    (message "Starting new %s session ..." system)
+    (sesman-start-session system)))
 
 (defun sesman-restart ()
   "Restart sesman session."
   (interactive)
   (let* ((system (sesman--system))
-         (old-session (sesman-ensure-session system "Restart session: "))
-         (old-session (sesman-unregister system old-session))
-         (new-session (sesman-restart-session system old-session)))
-    (sesman-register system new-session)
-    (message "Restarted %s" (car old-session))
-    new-session))
+         (old-session (sesman-ensure-session system "Restart session: ")))
+    (message "Restarting %s '%s' session" system (car old-session))
+    (sesman-restart-session system old-session)))
 
 (defun sesman-quit (all)
   "Terminate sesman session.
@@ -92,7 +88,10 @@ double universal argument, t or 'all, kill all sessions."
               (sesman-unregister system s)
               (sesman-quit-session system s))
             sessions)
-      (message "Killed %s" (mapcar #'car sessions)))))
+      (message
+       "Killed %s %s %s"  system
+       (if (= 1 (length sessions)) "session" "sessions")
+       (mapcar #'car sessions)))))
 
 (defun sesman-info (which)
   "Display current session info.
@@ -103,7 +102,7 @@ sessions."
   (interactive "P")
   (let* ((system (sesman--system))
          (sessions (sesman--on-C-u-u-sessions
-                    system "Info for session: : " all)))
+                    system "Info for session: : " which)))
     (message
      (mapconcat (lambda (ses)
                   (format "%s:\n%s"
@@ -144,8 +143,6 @@ sessions."
     (define-key sesman-map (kbd   "s") 'sesman-start)
     (define-key sesman-map (kbd "C-r") 'sesman-restart)
     (define-key sesman-map (kbd   "r") 'sesman-restart)
-    (define-key sesman-map (kbd "C-R") 'sesman-replicate)
-    (define-key sesman-map (kbd   "R") 'sesman-replicate)
     (define-key sesman-map (kbd "C-q") 'sesman-quit)
     (define-key sesman-map (kbd   "q") 'sesman-quit)
     (define-key sesman-map (kbd "C-b") 'sesman-link-with-buffer)
@@ -179,8 +176,7 @@ By default, calls `sesman-quit-session' and then
   (let ((old-name (car session)))
     (sesman-quit-session system session)
     (let ((new-session (sesman-start-session system)))
-      (setcar new-session old-name)
-      new-session)))
+      (setcar new-session old-name))))
 
 (cl-defgeneric sesman-session-info (system session)
   (cdr session))
@@ -320,29 +316,40 @@ SYSTEM defaults to current system.  Remove session from
     (sesman--clear-links)
     session))
 
-(defun sesman-add-object (system session-name object)
-  "Add (destructively) OBJECT to session SESSION-NAME.
-SYSTEM defaults to the system in the current buffer. If
-SESSION-NAME, does not exist create one first."
+(defun sesman-add-object (system session-name object &optional allow-new)
+  "Add (destructively) OBJECT to session SESSION-NAME of SYSTEM.
+If ALLOW-NEW is nil and session with SESSION-NAME does not exist
+throw an error, otherwise register a new session with
+session (list SESSION-NAME OBJECT)."
   (let* ((system (or system (sesman--system)))
          (session (sesman-get-session system session-name)))
     (if session
         (setcdr session (cons object (cdr session)))
-      (sesman-register system (list session-name object)))))
+      (if allow-new
+          (sesman-register system (list session-name object))
+        (error "%s session '%s' does not exist."
+               (sesman--system-name system) session-name)))))
 
-(defun sesman-remove-object (system session-name object)
+(defun sesman-remove-object (system session-name object &optional auto-unregister no-error)
   "Remove (destructively) OBJECT from session SESSION-NAME of SYSTEM.
 If SESSION-NAME is nil, retrieve the session with
 `sesman-session-for-object'. If OBJECT is the last object in
-sesman session, `sesman-unregister' the session."
+sesman session, `sesman-unregister' the session. If
+AUTO-UNREGISTER is non-nil unregister sessions of length 0. If
+NO-ERROR is non-nil, don't throw an error if OBJECT is not found
+in any session. This is useful if there are several
+\"concurrent\" parties which can remove the object."
   (let* ((system (or system (sesman--system)))
          (session (if session-name
                       (sesman-get-session system session-name)
-                    (sesman-get-session-for-object system object)))
+                    (sesman-get-session-for-object system object no-error)))
          (new-session (delete object session)))
-    (if (= (length new-session) 1)
-        (sesman-unregister system session)
-      (puthash (cons system (car session)) new-session sesman-sessions))))
+    (cond ((null new-session))
+          ((= (length new-session) 1)
+           (when auto-unregister
+             (sesman-unregister system session)))
+          (t
+           (puthash (cons system (car session)) new-session sesman-sessions)))))
 
 (defun sesman-get-session-for-object (system object &optional no-error)
   (let* ((system (or system (sesman--system)))
@@ -354,6 +361,9 @@ sesman session, `sesman-unregister' the session."
           (error "%s is not part of any %s sessions"
                  object system)))))
 
+(defun sesman-get-session-name-for-object (system object &optional no-error)
+  (car (sesman-get-session-for-object system object no-error)))
+  
 
 ;;; Contexts
 
