@@ -33,7 +33,7 @@ Consists of several generics, of which only first two are strictly required:
   - `sesman-start-session`
   - `sesman-kill-session`
   - `sesman-restart-session` - defaults to `sesman-start-session` + `sesman-kill-session`
-  - `sesman-greater-p` - used for sorting sessions in "recency" order. Defaults to sorting by session name.
+  - `sesman-more-relevant-p` - used for sorting sessions in "recency" order. Defaults to sorting by session name.
   <!-- - `sesman-friendly-session-p` - used to define friendly sessions (e.g. dependency projects). -->
   
 Depending on the purpose at hand, sesman system can use several functions to retrieve sessions (`sesman-ensure-session`, `sesman-linked-sessions`, `sesman-friendly-sessions`  and `sesman-sessions`). Most important of these being `sesman-ensure-session` which should be used to ensure that at least one session is linked to the current context. It returns the most specific session given sesman associations already in place. In case of ambiguity (or no sessions) the user is asked for a session.
