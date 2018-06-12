@@ -161,8 +161,10 @@ sessions."
 (defvar sesman-map
   (let (sesman-map)
     (define-prefix-command 'sesman-map)
-    (define-key sesman-map (kbd "C-i") 'sesman-info)
-    (define-key sesman-map (kbd   "i") 'sesman-info)
+    (define-key sesman-map (kbd "C-i") 'sesman-show-info)
+    (define-key sesman-map (kbd   "i") 'sesman-show-info)
+    (define-key sesman-map (kbd "C-l") 'sesman-show-links)
+    (define-key sesman-map (kbd   "l") 'sesman-show-links)
     (define-key sesman-map (kbd "C-s") 'sesman-start)
     (define-key sesman-map (kbd   "s") 'sesman-start)
     (define-key sesman-map (kbd "C-r") 'sesman-restart)
@@ -179,6 +181,29 @@ sessions."
     (define-key sesman-map (kbd "  u") 'sesman-unlink)
     sesman-map)
   "Session management prefix keymap.")
+
+(defvar sesman-menu
+  '("Sesman"
+    ["Show Session Info" sesman-show-info]
+    ["Show Active Links" sesman-show-links]
+    "--"
+    ["Start" sesman-start]
+    ["Restart" sesman-restart :active (sesman-has-sessions-p)]
+    ["Quit" sesman-quit :active (sesman-has-sessions-p)]
+    "--"
+    ["Link with Buffer" sesman-link-with-buffer :active (sesman-has-sessions-p)]
+    ["Link with Directory" sesman-link-with-directory :active (sesman-has-sessions-p)]
+    ["Link with Project" sesman-link-with-project :active (sesman-has-sessions-p)]
+    "--"
+    ["Unlink" sesman-unlink :active (sesman-has-sessions-p)])
+  "Menu for Sesman")
+
+(defun sesman-install-menu (map)
+  "Install `sesman-menu' into MAP ."
+  (easy-menu-do-define 'seman-menu-open
+                       map
+                       (get 'sesman-menu 'variable-documentation)
+                       sesman-menu))
 
 
 ;;; System Generic
