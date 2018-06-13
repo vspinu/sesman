@@ -69,6 +69,13 @@ see `sesman-more-relevant-p'."
   :group 'sesman
   :type '(repeat symbol))
 
+(defcustom sesman-abbreviate-paths 2
+  "Abbreviate paths to that many parents.
+When set to nil, don't abbreviate directories."
+  :group 'sesman
+  :type '(choice number
+                 (const :tag "Don't abbreviate" nil)))
+
 (defun sesman-start ()
   "Start sesman session."
   (interactive)
@@ -80,7 +87,7 @@ see `sesman-more-relevant-p'."
   "Restart sesman session."
   (interactive)
   (let* ((system (sesman--system))
-         (old-session (sesman-ensure-session system "Restart session: ")))
+         (old-session (sesman-ensure-linked-session system "Restart session: ")))
     (message "Restarting %s '%s' session" system (car old-session))
     (sesman-restart-session system old-session)))
 
@@ -104,8 +111,8 @@ double universal argument, t or 'all, kill all sessions."
        (if (= 1 (length sessions)) "session" "sessions")
        (mapcar #'car sessions)))))
 
-(defun sesman-show-info (which)
-  "Display session info.
+(defun sesman-show-session-info (which)
+  "Display session(s) info.
 When WHICH is nil, show info for current session; when a single
 universal argument or 'linked, show info for all linked session;
 when a double universal argument or 'all, show info for all
@@ -161,8 +168,8 @@ sessions."
 (defvar sesman-map
   (let (sesman-map)
     (define-prefix-command 'sesman-map)
-    (define-key sesman-map (kbd "C-i") 'sesman-show-info)
-    (define-key sesman-map (kbd   "i") 'sesman-show-info)
+    (define-key sesman-map (kbd "C-i") 'sesman-show-session-info)
+    (define-key sesman-map (kbd   "i") 'sesman-show-session-info)
     (define-key sesman-map (kbd "C-l") 'sesman-show-links)
     (define-key sesman-map (kbd   "l") 'sesman-show-links)
     (define-key sesman-map (kbd "C-s") 'sesman-start)
@@ -184,8 +191,8 @@ sessions."
 
 (defvar sesman-menu
   '("Sesman"
-    ["Show Session Info" sesman-show-info]
-    ["Show Active Links" sesman-show-links]
+    ["Show Session Info" sesman-show-session-info]
+    ["Show Links" sesman-show-links]
     "--"
     ["Start" sesman-start]
     ["Restart" sesman-restart :active (sesman-has-sessions-p)]
@@ -320,37 +327,67 @@ are a subset of `SESMAN-LINKS' sorted in order of relevance."
                     SESMAN-LINKS))))
    (or cxt-types (sesman-context-types system))))
 
-(defun sesman-ensure-session (system &optional prompt ask-new ask-all search-all)
+(defun sesman-ensure-linked-session (system &optional prompt ask-new ask-all)
   "Ensure that at least one session is linked and return most relevant one.
 If there is an unambiguous link in place, return that
-session. Otherwise, ask the user for a session with PROMPT.  When
-ASK-NEW is non-nil, offer *new* option to start a new session. If
-ASK-ALL is non-nil offer *all* option. If ASK-ALL is non-nil,
-return a list of sessions, otherwise a single session. If
-SEARCH-ALL is non-nil, search among all system sessions,
-otherwise only among linked sessions."
+session. Otherwise, ask the user for a session with
+PROMPT. ASK-NEW and ASK-ALL have an effect only when there are
+multiple associations and `sesman-disambiguate-by-relevance' is
+nil, in which case ASK-NEW and ASK-ALL are passed directly to
+`sesman-ask-for-session'."
   (let ((prompt (or prompt (format "%s session: " (sesman--cap-system-name system))))
-        (sessions (if search-all
-                      (sesman--all-system-sessions system)
-                    (sesman-linked-sessions system))))
+        (sessions (sesman-linked-sessions system)))
     (cond
      ;; 0. No sessions; throw
      ((null sessions)
-      (user-error "No %s%s sessions found" (unless search-all "linked ") system))
+      (user-error "No linked %s sessions in current context" system))
      ;; 1. Single association, or auto-disambiguate; return first
-     ((and (not ask-new)
-           (or sesman-disambiguate-by-relevance
-               (eq (length sessions) 1)))
+     ((or sesman-disambiguate-by-relevance
+          (eq (length sessions) 1))
       (if ask-all
           sessions
         (car sessions)))
-     ;; 2. Multiple associations; ask
+     ;; 2. Multiple ambiguous associations; ask
      (sessions
-      (sesman--ask-for-session system prompt sessions ask-new ask-all))
-     ;; 3. No associations, get all system sessions and ask
-     ;; (t (let ((sessions (sesman--all-system-sessions)))
-     ;;      (sesman--ask-for-session system prompt sessions ask-new ask-all)))
-     )))
+      (sesman-ask-for-session system prompt sessions ask-new ask-all)))))
+
+(defvar sesman--select-session-history nil)
+(defun sesman-ask-for-session (system prompt &optional sessions ask-new ask-all)
+  "Ask for a SYSTEM session with PROMPT.
+SESSIONS defaults to value returned from `sesman-sessions'. If
+ASK-NEW is non-nil, offer *new* option to start a new session. If
+ASK-ALL is non-nil offer *all* option. If ASK-ALL is non-nil,
+return a list of sessions, otherwise a single session."
+  (let* ((sesions (or sesions (sesman-sessions system)))
+         (name.syms (mapcar (lambda (s)
+                              (let ((name (car s)))
+                                (cons (if (symbolp name) (symbol-name name) name)
+                                      name)))
+                            sessions))
+         (nr (length name.syms))
+         (syms (if (and (not ask-new) (= nr 0))
+                   (error "No %s sessions found" system)
+                 (append name.syms
+                         (when ask-new '(("*new*")))
+                         (when (and ask-all (> nr 1))
+                           '(("*all*"))))))
+         (def (caar syms))
+         ;; (def (if (assoc (car sesman--select-session-history) syms)
+         ;;          (car sesman--select-session-history)
+         ;;        (caar syms)))
+         (sel (completing-read
+               prompt (mapcar #'car syms) nil t nil 'sesman--select-session-history def)))
+    (cond
+     ((string= sel "*new*")
+      (let ((ses (sesman-start-session system)))
+        (message "Started %s" (car ses))
+        (if ask-all (list ses) ses)))
+     ((string= sel "*all*")
+      sessions)
+     (t
+      (let* ((sym (cdr (assoc sel syms)))
+             (ses (assoc sym sessions)))
+        (if ask-all (list ses) ses))))))
 
 (defun sesman-current-session (system &optional cxt-types)
   "Get the most relevant linked session for SYSTEM.
@@ -369,23 +406,9 @@ list returned from `sesman-context-types'."
               (gethash (car assoc) SESMAN-SESSIONS))
             (sesman-get-active-links system cxt-types))))
 
-;; (defun sesman-friendly-sessions (&optional system)
-;;   "Return a list of friendly (for current context) SYSTEM sessions.
-;; Session is friendly if `sesman-friendly-session-p' returns non-nil."
-;;   (let ((system (or system (sesman--system)))
-;;         sessions)
-;;     (maphash
-;;      (lambda (k s)
-;;        (when (and (eql (car k) system)
-;;                   (sesman-friendly-session-p system s))
-;;          (push s sessions)))
-;;      SESMAN-SESSIONS)
-;;     (sesman--sort-sessions system sessions)))
-
 (defun sesman-sessions (&optional system)
-  "Return all sessions registered with SYSTEM.
-Return a list of all session registered with the
-system. `sesman-linked-sessions' are sorted first."
+  "Return a list of all sessions registered with SYSTEM.
+`sesman-linked-sessions' lead the list."
   (let ((system (or system (sesman--system))))
     (delete-dups
      (append (sesman-linked-sessions system)
@@ -522,7 +545,7 @@ in any session. This is useful if there are several
     (sesman-linked-sessions system))
    ((or (equal which '(16)) (eq which 'all) (eq which t))
     (sesman--all-system-sessions system))
-   (t (sesman-ensure-session system prompt nil 'ask-all 'all))))
+   (t (error "Invalid which argument (%s)" which))))
 
 (defun sesman--more-recent-p (bufs1 bufs2)
   (eq 1 (seq-some (lambda (b)
@@ -556,10 +579,13 @@ in any session. This is useful if there are several
         (setq SESMAN-LINKS (cons link SESMAN-LINKS))))
     key))
 
-(defun sesman--abrev-maybe (obj)
-  (if (stringp obj)
-      (abbreviate-file-name obj)
-    obj))
+(defun sesman--abbrev-path-maybe (obj)
+  ;; FIXME: full abbrev
+  (cond
+   ((stringp obj) (abbreviate-file-name obj))
+   ((and (consp obj) (stringp (cdr obj)))
+    (cons (car obj) (abbreviate-file-name (cdr obj))))
+   (t obj)))
 
 (defmacro sesman--link-session-interactively (cxt-type)
   (declare (indent 1)
@@ -567,10 +593,10 @@ in any session. This is useful if there are several
   (let ((cxt-name (symbol-name cxt-type)))
     `(let ((system (sesman--system)))
        (if (member ',cxt-type (sesman-context-types system))
-           (let ((session (sesman--ask-for-session
+           (let ((session (sesman-ask-for-session
                            system
                            (format "Link with %s %s: "
-                                   ,cxt-name (sesman--abrev-maybe
+                                   ,cxt-name (sesman--abbrev-path-maybe
                                               (sesman-context ',cxt-type)))
                            (sesman--all-system-sessions system)
                            'ask-new)))
@@ -620,40 +646,9 @@ in any session. This is useful if there are several
                       (gethash (car x) SESMAN-SESSIONS))
                     SESMAN-LINKS)))
 
-(defvar sesman--select-session-history nil)
-(defun sesman--ask-for-session (system prompt sessions &optional ask-new ask-all)
-  (let* ((name.syms (mapcar (lambda (s)
-                              (let ((name (car s)))
-                                (cons (if (symbolp name) (symbol-name name) name)
-                                      name)))
-                            sessions))
-         (nr (length name.syms))
-         (syms (if (and (not ask-new) (= nr 0))
-                   (error "No %s sessions found" system)
-                 (append name.syms
-                         (when ask-new '(("*new*")))
-                         (when (and ask-all (> nr 1))
-                           '(("*all*"))))))
-         (def (caar syms))
-         ;; (def (if (assoc (car sesman--select-session-history) syms)
-         ;;          (car sesman--select-session-history)
-         ;;        (caar syms)))
-         (sel (completing-read
-               prompt (mapcar #'car syms) nil t nil 'sesman--select-session-history def)))
-    (cond
-     ((string= sel "*new*")
-      (let ((ses (sesman-start-session system)))
-        (message "Started %s" (car ses))
-        (if ask-all (list ses) ses)))
-     ((string= sel "*all*")
-      sessions)
-     (t
-      (let* ((sym (cdr (assoc sel syms)))
-             (ses (assoc sym sessions)))
-        (if ask-all (list ses) ses))))))
-
 (defun sesman--format-link (link)
-  (let ((val (sesman--link-value link)))
+  (let ((val (sesman--abbrev-path-maybe
+              (sesman--link-value link))))
     (format "%s(%s)->%s"
             (sesman--link-context-type link)
             (if (listp val) (cdr val) val)
@@ -661,7 +656,7 @@ in any session. This is useful if there are several
 
 (defun sesman--ask-for-link (prompt links &optional ask-all)
   (let* ((name.keys (mapcar (lambda (link)
-                              (cons (sesman--format-link x) link))
+                              (cons (sesman--format-link link) link))
                             links))
          (name.keys (append name.keys
                             (when (and ask-all (> (length name.keys) 1))
