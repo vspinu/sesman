@@ -11,9 +11,9 @@ For Emacs based IDEs, session is commonly composed of one or more physical proce
 
   - "session" is a list of the form `(session-name ..other-stuff..)` where `..other-stuff..` is system dependent.
   - "system" is generic name used for a tool which uses sesman (e.g. `CIDER`, `ESS` etc)
-  - "contexts" are Emacs objects which describe current context. For example `current-buffer`, `default-directory` and `project-current` are such contexts. Context objects are used to create associations (links) between the current context and sessions. At any given time the user can link (unlink) sessions to (from) contexts. By default there are three types of contexts - buffer, directory and project, but systems can define their own contexts.
+  - "contexts" are Emacs objects which describe current context. For example `current-buffer`, `default-directory` and `project-current` are such contexts. Context objects are used to create associations (links) between the current context and sessions. At any given time the user can link (unlink) sessions to (from) contexts. By default there are three types of contexts - buffer, directory and project, but systems can define their own specialized context types..
   
-Sesman is composed of two parts, [user interface][], available as [sesman map][], and [system interface][] consisting of a few generic functions for which each systems should define its own methods. 
+Sesman is composed of two parts, [user interface][], available as a [sesman map][] and menu, and [system interface][] consisting of a few generics and API functions.
 
 ### [User Interface][]
 
@@ -43,9 +43,9 @@ Systems could directly use user level commands to manage sessions (`sesman-start
 Systems should link [semsna map][] into their modes' key-maps (ideally on `C-c C-s`, which is a good mnemonic, is free in CIDER and already does similar things in ESS).
 
 
-[user interface]: https://github.com/vspinu/sesman/blob/master/sesman.el#L53
-[system interface]: https://github.com/vspinu/sesman/blob/master/sesman.el#L133
-[sesman map]: https://github.com/vspinu/sesman/blob/master/sesman.el#L112-L130
+[user interface]: https://github.com/vspinu/sesman/blob/master/sesman.el#L55
+[system interface]: https://github.com/vspinu/sesman/blob/master/sesman.el#L216
+[sesman map]: https://github.com/vspinu/sesman/blob/master/sesman.el#L168
 
 [cider]: https://github.com/clojure-emacs/cider
 [ess]: https://ess.r-project.org/

@@ -213,7 +213,7 @@ sessions."
                        sesman-menu))
 
 
-;;; System Generic
+;;; System Generics
 
 (defvar-local sesman-system nil
   "Name of the system managed by `sesman'.
