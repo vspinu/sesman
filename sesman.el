@@ -626,17 +626,15 @@ session (list SESSION-NAME OBJECT)."
 
 (defun sesman-remove-object (system session-name object &optional auto-unregister no-error)
   "Remove (destructively) OBJECT from session SESSION-NAME of SYSTEM.
-If SESSION-NAME is nil, retrieve the session with
-`sesman-session-for-object'.  If OBJECT is the last object in
-sesman session, `sesman-unregister' the session.  If
-AUTO-UNREGISTER is non-nil unregister sessions of length 0. If
-NO-ERROR is non-nil, don't throw an error if OBJECT is not found
-in any session.  This is useful if there are several
-\"concurrent\" parties which can remove the object."
+If SESSION-NAME is nil, retrieve the session with `sesman-session-for-object'.
+If OBJECT is the last object in sesman session, `sesman-unregister' the session.
+If AUTO-UNREGISTER is non-nil unregister sessions of length 0. If NO-ERROR is
+non-nil, don't throw an error if OBJECT is not found in any session. This is
+useful if there are several \"concurrent\" parties which can remove the object."
   (let* ((system (or system (sesman--system)))
          (session (if session-name
                       (sesman-session system session-name)
-                    (sesman-get-session-for-object system object no-error)))
+                    (sesman-session-for-object system object no-error)))
          (new-session (delete object session)))
     (cond ((null new-session))
           ((= (length new-session) 1)
@@ -645,7 +643,7 @@ in any session.  This is useful if there are several
           (t
            (puthash (cons system (car session)) new-session SESMAN-SESSIONS)))))
 
-(defun sesman-get-session-for-object (system object &optional no-error)
+(defun sesman-session-for-object (system object &optional no-error)
   "Retrieve SYSTEM session which contains OBJECT.
 When NO-ERROR is non-nil, don't throw an error if OBJECT is not part of any
 session.  In such case, return nil."
@@ -658,11 +656,11 @@ session.  In such case, return nil."
           (error "%s is not part of any %s sessions"
                  object system)))))
 
-(defun sesman-get-session-name-for-object (system object &optional no-error)
+(defun sesman-session-name-for-object (system object &optional no-error)
   "Retrieve the name of the SYSTEM's session containing OBJECT.
 When NO-ERROR is non-nil, don't throw an error if OBJCECT is not part of
 any session.  In such case, return nil."
-  (car (sesman-get-session-for-object system object no-error)))
+  (car (sesman-session-for-object system object no-error)))
 
 (defun sesman-more-recent-p (bufs1 bufs2)
   "Return t if BUFS1 is more recent than BUFS2.

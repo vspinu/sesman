@@ -58,3 +58,5 @@ Systems should link [sesman map][] into their key-maps (ideally on `C-c C-s`) an
 [geiser]: https://github.com/jaor/geiser
 [robe]: https://github.com/dgutov/robe
 [slime]: https://common-lisp.net/project/slime/
+
+[badge-license]: https://img.shields.io/badge/license-GPL_3-green.svg
