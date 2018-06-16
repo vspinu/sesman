@@ -34,25 +34,13 @@
 ;;; Code:
 
 (require 'project)
-(require 'mule-util)
 (require 'seq)
+(require 'subr-x)
 
 (defgroup sesman nil
-  "Session manager."
-  :prefix "sesman")
-
-(defvar SESMAN-SESSIONS (make-hash-table :test #'equal)
-  "Hashtable of all sesman sessions.
-Key is a cons (system-name . session-name).")
-
-(defvar SESMAN-LINKS nil
-  "An alist of all sesman links.
-Each element is of the form (key cxt-type cxt-value) where
-\"key\" is of the form (system-name . session-name). system-name
-and cxt-type must be symbols.")
-
-
-;;; User Interface
+  "Generic Session Manager."
+  :prefix "sesman-"
+  :group 'tools)
 
 (defcustom sesman-disambiguate-by-relevance t
   "If t choose most relevant session in ambiguous situations, otherwise ask.
@@ -77,6 +65,182 @@ see `sesman-more-relevant-p'."
 ;;   :type '(choice number
 ;;                  (const :tag "Don't abbreviate" nil)))
 
+(defvar SESMAN-SESSIONS (make-hash-table :test #'equal)
+  "Hashtable of all sesman sessions.
+Key is a cons (system-name . session-name).")
+
+(defvar SESMAN-LINKS nil
+  "An alist of all sesman links.
+Each element is of the form (key cxt-type cxt-value) where
+\"key\" is of the form (system-name . session-name). system-name
+and cxt-type must be symbols.")
+
+(defvar-local sesman-system nil
+  "Name of the system managed by `sesman'.
+Can be either a symbol, or a function returning a symbol.")
+
+
+;; Internal Utilities
+
+(defun sesman--on-C-u-u-sessions (system which)
+  (cond
+   ((null which)
+    (let ((ses (sesman-current-session system)))
+      (when ses
+        (list ses))))
+   ((or (equal which '(4)) (eq which 'linked))
+    (sesman-linked-sessions system))
+   ((or (equal which '(16)) (eq which 'all) (eq which t))
+    (sesman--all-system-sessions system))
+   (t (error "Invalid which argument (%s)" which))))
+
+(defun sesman--cap-system-name (system)
+  (let ((name (symbol-name system)))
+    (if (string-match-p "^[[:upper:]]" name)
+        name
+      (capitalize name))))
+
+(defun sesman--link-session (system session &optional cxt-type)
+  (let* ((ses-name (or (car-safe session)
+                       (error "SESSION must be a headed list")))
+         (cxt-val (or (if cxt-type
+                          (sesman-context cxt-type)
+                        (seq-some (lambda (ctype)
+                                    (let ((val (sesman-context ctype)))
+                                      (setq cxt-type ctype)
+                                      val))
+                                  (reverse (sesman-context-types system))))
+                      (user-error "No local context of type %s" cxt-type)))
+         (key (cons system ses-name))
+         (link (list key cxt-type cxt-val)))
+    (if (member cxt-type sesman-1-to-1-links)
+        (thread-last SESMAN-LINKS
+          (seq-remove (sesman--link-lookup-fn system nil cxt-type cxt-val))
+          (cons link)
+          (setq SESMAN-LINKS))
+      (unless (seq-filter (sesman--link-lookup-fn system ses-name cxt-type cxt-val)
+                          SESMAN-LINKS)
+        (setq SESMAN-LINKS (cons link SESMAN-LINKS))))
+    key))
+
+(defmacro sesman--link-session-interactively (cxt-type)
+  (declare (indent 1)
+           (debug (symbolp &rest)))
+  (let ((cxt-name (symbol-name cxt-type)))
+    `(let ((system (sesman--system)))
+       (if (member ',cxt-type (sesman-context-types system))
+           (let ((session (sesman-ask-for-session
+                           system
+                           (format "Link with %s %s: "
+                                   ,cxt-name (sesman--abbrev-path-maybe
+                                              (sesman-context ',cxt-type)))
+                           (sesman--all-system-sessions system)
+                           'ask-new)))
+             (sesman--link-session system session ',cxt-type))
+         (error (format "%s association not allowed for this system (%s)"
+                        ,(capitalize (symbol-name cxt-type))
+                        system))))))
+
+;; FIXME: incorporate `sesman-abbreviate-paths'
+(defun sesman--abbrev-path-maybe (obj)
+  (cond
+   ((stringp obj) (abbreviate-file-name obj))
+   ((and (consp obj) (stringp (cdr obj)))
+    (cons (car obj) (abbreviate-file-name (cdr obj))))
+   (t obj)))
+
+(defun sesman--system ()
+  (if sesman-system
+      (if (functionp sesman-system)
+          (funcall sesman-system)
+        sesman-system)
+    (error "No `sesman-system' in buffer `%s'" (current-buffer))))
+
+(defun sesman--all-system-sessions (&optional system)
+  "Return a list of sessions registered with SYSTEM."
+  (let ((system (or system (sesman--system)))
+        sessions)
+    (maphash
+     (lambda (k s)
+       (when (eql (car k) system)
+         (push s sessions)))
+     SESMAN-SESSIONS)
+    (sesman--sort-sessions system sessions)))
+
+;; FIXME: make this a macro
+(defun sesman--link-lookup-fn (&optional system ses-name cxt-type cxt-val x)
+  (let ((system (or system (caar x)))
+        (ses-name (or ses-name (cdar x)))
+        (cxt-type (or cxt-type (nth 1 x)))
+        (cxt-val (or cxt-val (nth 2 x))))
+    (lambda (el)
+      (and (or (null system) (eq (caar el) system))
+           (or (null ses-name) (equal (cdar el) ses-name))
+           (or (null cxt-type) (eq (nth 1 el) cxt-type))
+           (or (null cxt-val) (equal (nth 2 el) cxt-val))))))
+
+(defun sesman--unlink (x)
+  (setq SESMAN-LINKS
+        (seq-remove (sesman--link-lookup-fn nil nil nil nil x)
+                    SESMAN-LINKS)))
+
+(defun sesman--clear-links ()
+  (setq SESMAN-LINKS
+        (seq-filter (lambda (x)
+                      (gethash (car x) SESMAN-SESSIONS))
+                    SESMAN-LINKS)))
+
+(defun sesman--format-link (link)
+  (let ((val (sesman--abbrev-path-maybe
+              (sesman--link-value link))))
+    (format "%s(%s)->%s"
+            (sesman--link-context-type link)
+            (if (listp val) (cdr val) val)
+            (propertize (sesman--link-session-name link) 'face 'bold))))
+
+(defun sesman--ask-for-link (prompt links &optional ask-all)
+  (let* ((name.keys (mapcar (lambda (link)
+                              (cons (sesman--format-link link) link))
+                            links))
+         (name.keys (append name.keys
+                            (when (and ask-all (> (length name.keys) 1))
+                              '(("*all*")))))
+         (nms (mapcar #'car name.keys))
+         (sel (completing-read prompt nms nil t nil nil (car nms))))
+    (cond ((string= sel "*all*")
+           links)
+          (ask-all
+           (list (cdr (assoc sel name.keys))))
+          (t
+           (cdr (assoc sel name.keys))))))
+
+(defun sesman--link-system-name (link)
+  (caar link))
+
+(defun sesman--link-session-name (link)
+  (cdar link))
+
+(defun sesman--link-context-type (link)
+  (cadr link))
+
+(defun sesman--link-value (link)
+  (nth 2 link))
+
+(defun sesman--sort-sessions (system sessions)
+  (seq-sort (lambda (x1 x2)
+              (sesman-more-relevant-p system x1 x2))
+            sessions))
+
+(defun sesman--sort-links (system links)
+  (seq-sort (lambda (x1 x2)
+              (sesman-more-relevant-p system
+                                      (gethash (car x1) SESMAN-SESSIONS)
+                                      (gethash (car x2) SESMAN-SESSIONS)))
+            links))
+
+
+;;; User Interface
+
 (defun sesman-start ()
   "Start sesman session."
   (interactive)
@@ -99,8 +263,7 @@ universal argument or 'linked, kill all linked session; when a
 double universal argument, t or 'all, kill all sessions."
   (interactive "P")
   (let* ((system (sesman--system))
-         (sessions (sesman--on-C-u-u-sessions
-                    system "Kill session: " which)))
+         (sessions (sesman--on-C-u-u-sessions system which)))
     (if (null sessions)
         (message "No more %s sessions" system)
       (mapc (lambda (s)
@@ -120,8 +283,7 @@ when a double universal argument or 'all, show info for all
 sessions."
   (interactive "P")
   (let* ((system (sesman--system))
-         (sessions (sesman--on-C-u-u-sessions
-                    system "Info for session: : " which)))
+         (sessions (sesman--on-C-u-u-sessions system which)))
     (if sessions
         (message (mapconcat
                   (lambda (ses)
@@ -216,10 +378,6 @@ sessions."
 
 ;;; System Generic
 
-(defvar-local sesman-system nil
-  "Name of the system managed by `sesman'.
-Can be either a symbol, or a function returning a symbol.")
-
 (cl-defgeneric sesman-start-session (system)
   "Start and return SYSTEM SESSION.")
 
@@ -235,14 +393,14 @@ By default, calls `sesman-quit-session' and then
     (let ((new-session (sesman-start-session system)))
       (setcar new-session old-name))))
 
-(cl-defgeneric sesman-session-info (system session)
+(cl-defgeneric sesman-session-info (_system session)
   (cdr session))
 
-(cl-defgeneric sesman-context-types (system)
+(cl-defgeneric sesman-context-types (_system)
   "Return a list of context types understood by SYSTEM."
   '(buffer directory project))
 
-(cl-defgeneric sesman-more-relevant-p (system session1 session2)
+(cl-defgeneric sesman-more-relevant-p (_system session1 session2)
   "Return non-nil if SESSION1 should be sorted before SESSION2.
 By default, sort by session name. Systems should overwrite this method to
 provide a more meaningful ordering. If your system objects are buffers you
@@ -303,7 +461,7 @@ SESSIONS defaults to value returned from `sesman-sessions'.  If
 ASK-NEW is non-nil, offer *new* option to start a new session.  If
 ASK-ALL is non-nil offer *all* option.  If ASK-ALL is non-nil,
 return a list of sessions, otherwise a single session."
-  (let* ((sesions (or sesions (sesman-sessions system)))
+  (let* ((sessions (or sessions (sesman-sessions system)))
          (name.syms (mapcar (lambda (s)
                               (let ((name (car s)))
                                 (cons (if (symbolp name) (symbol-name name) name)
@@ -414,7 +572,8 @@ If AS-STRING is non-nil, return an equivalent string representation."
   "Retrieve all active links in current context for SYSTEM.
 CXT-TYPES is a list of context types to consider.  Returned links
 are a subset of `SESMAN-LINKS' sorted in order of relevance."
-  (mapcan
+  ;; mapcan is a built-in in 26.1; don't want to require cl-lib for one function
+  (seq-mapcat
    (lambda (cxt-type)
      (let ((lfn (sesman--link-lookup-fn system nil cxt-type)))
        (sesman--sort-links
@@ -444,16 +603,16 @@ CXT-TYPES defaults to `sesman-context-types' for current SYSTEM."
 
 (defun sesman-register (system session)
   "Register SESSION into `SESMAN-SESSIONS' and `SESMAN-LINKS'.
-SYSTEM defaults to current system.  If a session with same name
-is already registered in `SESMAN-SESSIONS', change the name by
-appending \"<1>\", \"<2>\" ... to the name.  This function should
-be called by legacy connection initializers (\"run-xyz\",
-\"xyz-jack-in\" etc.)."
+SYSTEM defaults to current system. If a session with same name is already
+registered in `SESMAN-SESSIONS', change the name by appending \"#1\", \"#2\" ...
+to the name. This function should be called by system-specific connection
+initializers (\"run-xyz\", \"xyz-jack-in\" etc.)."
   (let* ((system (or system (sesman--system)))
          (ses-name (car session))
+         (ses-name0 (car session))
          (i 1))
     (while (sesman-session system ses-name)
-      (setq ses-name (format "%s#%d" i)))
+      (setq ses-name (format "%s#%d" ses-name0 i)))
     (setq session (cons ses-name (cdr session)))
     (puthash (cons system ses-name) session SESMAN-SESSIONS)
     (sesman--link-session system session)
@@ -463,8 +622,7 @@ be called by legacy connection initializers (\"run-xyz\",
   "Unregister SESSION.
 SYSTEM defaults to current system.  Remove session from
 `SESMAN-SESSIONS' and `SESMAN-LINKS'."
-  (let ((system (or system (sesman--system)))
-        (ses-key (cons system (car session))))
+  (let ((ses-key (cons system (car session))))
     (remhash ses-key SESMAN-SESSIONS)
     (sesman--clear-links)
     session))
@@ -480,7 +638,7 @@ session (list SESSION-NAME OBJECT)."
         (setcdr session (cons object (cdr session)))
       (if allow-new
           (sesman-register system (list session-name object))
-        (error "%s session '%s' does not exist."
+        (error "%s session '%s' does not exist"
                (sesman--cap-system-name system) session-name)))))
 
 (defun sesman-remove-object (system session-name object &optional auto-unregister no-error)
@@ -541,190 +699,33 @@ buffers."
 
 ;;; Contexts
 
-(cl-defgeneric sesman-context (cxt-type)
+(cl-defgeneric sesman-context (_cxt-type)
   "Given context type CXT-TYPE return the context.")
-(cl-defmethod sesman-context ((cxt-type (eql buffer)))
+(cl-defmethod sesman-context ((_cxt-type (eql buffer)))
   "Return current buffer."
   (current-buffer))
-(cl-defmethod sesman-context ((cxt-type (eql directory)))
+(cl-defmethod sesman-context ((_cxt-type (eql directory)))
   "Return current directory."
   default-directory)
-(cl-defmethod sesman-context ((cxt-type (eql project)))
+(cl-defmethod sesman-context ((_cxt-type (eql project)))
   "Return current project."
   (project-current))
 
-(cl-defgeneric sesman-relevant-context-p (cxt-type cxt)
+(cl-defgeneric sesman-relevant-context-p (_cxt-type cxt)
   "Non-nil if context CXT is relevant to current context of type CXT-TYPE.")
-(cl-defmethod sesman-relevant-context-p ((cxt-type (eql buffer)) buf)
+(cl-defmethod sesman-relevant-context-p ((_cxt-type (eql buffer)) buf)
   "Non-nil if BUF is `current-buffer'."
   (eq (current-buffer) buf))
-(cl-defmethod sesman-relevant-context-p ((cxt-type (eql directory)) dir)
+(cl-defmethod sesman-relevant-context-p ((_cxt-type (eql directory)) dir)
   "Non-nil if DIR is the parent or equals the `default-directory'."
   (when (and dir default-directory)
     (string-match-p (concat "^" dir) default-directory)))
-(cl-defmethod sesman-relevant-context-p ((cxt-type (eql project)) proj)
+(cl-defmethod sesman-relevant-context-p ((_cxt-type (eql project)) proj)
   "Non-nil if PROJ is the parent or equals the `default-directory'."
   (when (and proj default-directory)
     (string-match-p (concat "^" (expand-file-name (cdr proj)))
                     default-directory)))
 
-
-;; Internals
-
-(defun sesman--on-C-u-u-sessions (system prompt which)
-  (cond
-   ((null which)
-    (when-let* ((ses (sesman-current-session system)))
-      (list ses)))
-   ((or (equal which '(4)) (eq which 'linked))
-    (sesman-linked-sessions system))
-   ((or (equal which '(16)) (eq which 'all) (eq which t))
-    (sesman--all-system-sessions system))
-   (t (error "Invalid which argument (%s)" which))))
-
-(defun sesman--cap-system-name (system)
-  (let ((name (symbol-name system)))
-    (if (string-match-p "^[[:upper:]]" name)
-        name
-      (capitalize name))))
-
-(defun sesman--link-session (system session &optional cxt-type)
-  (let* ((ses-name (or (car-safe session)
-                       (error "SESSION must be a headed list")))
-         (cxt-val (or (if cxt-type
-                          (sesman-context cxt-type)
-                        (seq-some (lambda (ctype)
-                                    (let ((val (sesman-context ctype)))
-                                      (setq cxt-type ctype)
-                                      val))
-                                  (reverse (sesman-context-types system))))
-                      (user-error "No local context of type %s" cxt-type)))
-         (key (cons system ses-name))
-         (link (list key cxt-type cxt-val)))
-    (if (member cxt-type sesman-1-to-1-links)
-        (thread-last SESMAN-LINKS
-          (seq-remove (sesman--link-lookup-fn system nil cxt-type cxt-val))
-          (cons link)
-          (setq SESMAN-LINKS))
-      (unless (seq-filter (sesman--link-lookup-fn system ses-name cxt-type cxt-val)
-                          SESMAN-LINKS)
-        (setq SESMAN-LINKS (cons link SESMAN-LINKS))))
-    key))
-
-(defun sesman--abbrev-path-maybe (obj)
-  ;; FIXME: incorporate `sesman-abbreviate-paths' 
-  (cond
-   ((stringp obj) (abbreviate-file-name obj))
-   ((and (consp obj) (stringp (cdr obj)))
-    (cons (car obj) (abbreviate-file-name (cdr obj))))
-   (t obj)))
-
-(defmacro sesman--link-session-interactively (cxt-type)
-  (declare (indent 1)
-           (debug (symbolp &rest)))
-  (let ((cxt-name (symbol-name cxt-type)))
-    `(let ((system (sesman--system)))
-       (if (member ',cxt-type (sesman-context-types system))
-           (let ((session (sesman-ask-for-session
-                           system
-                           (format "Link with %s %s: "
-                                   ,cxt-name (sesman--abbrev-path-maybe
-                                              (sesman-context ',cxt-type)))
-                           (sesman--all-system-sessions system)
-                           'ask-new)))
-             (sesman--link-session system session ',cxt-type))
-         (error (format "%s association not allowed for this system (%s)"
-                        ,(capitalize (symbol-name cxt-type))
-                        system))))))
-
-(defun sesman--system ()
-  (if sesman-system
-      (if (functionp sesman-system)
-          (funcall sesman-system)
-        sesman-system)
-    (error "No `sesman-system' in buffer `%s'" (current-buffer))))
-
-(defun sesman--all-system-sessions (&optional system)
-  "Return a list of sessions registered with SYSTEM."
-  (let ((system (or system (sesman--system)))
-        sessions)
-    (maphash
-     (lambda (k s)
-       (when (eql (car k) system)
-         (push s sessions)))
-     SESMAN-SESSIONS)
-    (sesman--sort-sessions system sessions)))
-
-;; FIXME: make this a macro
-(defun sesman--link-lookup-fn (&optional system ses-name cxt-type cxt-val x)
-  (let ((system (or system (caar x)))
-        (ses-name (or ses-name (cdar x)))
-        (cxt-type (or cxt-type (nth 1 x)))
-        (cxt-val (or cxt-val (nth 2 x))))
-    (lambda (el)
-      (and (or (null system) (eq (caar el) system))
-           (or (null ses-name) (equal (cdar el) ses-name))
-           (or (null cxt-type) (eq (nth 1 el) cxt-type))
-           (or (null cxt-val) (equal (nth 2 el) cxt-val))))))
-
-(defun sesman--unlink (x)
-  (setq SESMAN-LINKS
-        (seq-remove (sesman--link-lookup-fn nil nil nil nil x)
-                    SESMAN-LINKS)))
-
-(defun sesman--clear-links ()
-  (setq SESMAN-LINKS
-        (seq-filter (lambda (x)
-                      (gethash (car x) SESMAN-SESSIONS))
-                    SESMAN-LINKS)))
-
-(defun sesman--format-link (link)
-  (let ((val (sesman--abbrev-path-maybe
-              (sesman--link-value link))))
-    (format "%s(%s)->%s"
-            (sesman--link-context-type link)
-            (if (listp val) (cdr val) val)
-            (propertize (sesman--link-session-name link) 'face 'bold))))
-
-(defun sesman--ask-for-link (prompt links &optional ask-all)
-  (let* ((name.keys (mapcar (lambda (link)
-                              (cons (sesman--format-link link) link))
-                            links))
-         (name.keys (append name.keys
-                            (when (and ask-all (> (length name.keys) 1))
-                              '(("*all*")))))
-         (nms (mapcar #'car name.keys))
-         (sel (completing-read "Unlink: " nms nil t nil nil (car nms))))
-    (cond ((string= sel "*all*")
-           links)
-          (ask-all
-           (list (cdr (assoc sel name.keys))))
-          (t
-           (cdr (assoc sel name.keys))))))
-
-(defun sesman--link-system-name (link)
-  (caar link))
-
-(defun sesman--link-session-name (link)
-  (cdar link))
-
-(defun sesman--link-context-type (link)
-  (cadr link))
-
-(defun sesman--link-value (link)
-  (nth 2 link))
-
-(defun sesman--sort-sessions (system sessions)
-  (seq-sort (lambda (x1 x2)
-              (sesman-more-relevant-p system x1 x2))
-            sessions))
-
-(defun sesman--sort-links (system links)
-  (seq-sort (lambda (x1 x2)
-              (sesman-more-relevant-p system
-                                      (gethash (car x1) SESMAN-SESSIONS)
-                                      (gethash (car x2) SESMAN-SESSIONS)))
-            links))
 
 (provide 'sesman)
 

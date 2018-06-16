@@ -1,2 +1,7 @@
-scratch.el
-test-sesman.el
+*~
+*\#*\#
+*.\#*
+*.elc
+TAGS
+.DS_STORE
+tmp/
