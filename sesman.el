@@ -57,8 +57,8 @@ system's implementation, see `sesman-more-relevant-p'."
   :group 'sesman
   :type 'boolean)
 
-(defcustom sesman-single-link-contexts '(buffer)
-  "List of context types for which links should be unique."
+(defcustom sesman-single-link-context-types '(buffer)
+  "List of context types to which at most one session can be linked."
   :group 'sesman
   :type '(repeat symbol))
 
@@ -118,7 +118,7 @@ Can be either a symbol, or a function returning a symbol.")
                       (user-error "No local context of type %s" cxt-type)))
          (key (cons system ses-name))
          (link (list key cxt-type cxt-val)))
-    (if (member cxt-type sesman-single-link-contexts)
+    (if (member cxt-type sesman-single-link-context-types)
         (thread-last sesman-links-alist
           (seq-remove (sesman--link-lookup-fn system nil cxt-type cxt-val))
           (cons link)
