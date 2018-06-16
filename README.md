@@ -9,7 +9,7 @@ This is a brief overview. Please see the code for more details.
 
 Sesman provides facilities for session management and interactive session association with current contexts. While "sessions" is a broad and implementation specific concept, the primary target of `sesman` are Emacs based IDEs ([CIDER][], [ESS][], [Geiser][], [Robe][], [SLIME][] etc.)
 
-For Emacs based IDEs, session is commonly composed of one or more physical processes (sub-processes, sockets, websockets etc). For example in the current implementation of [CIDER][] a session would be composed of one or more cider connections (Clojre or ClojureScript). Each [CIDER][] connection consists of user REPL buffer and two sub-processes, one for user eval communication and another for tooling (completion, inspector etc).
+For Emacs based IDEs, session is commonly composed of one or more physical processes (sub-processes, sockets, websockets etc). For example in the current implementation of [CIDER][] a session would be composed of one or more sesman connections (Clojre or ClojureScript). Each [CIDER][] connection consists of user REPL buffer and two sub-processes, one for user eval communication and another for tooling (completion, inspector etc).
 
 ### Concepts:
 
@@ -26,30 +26,32 @@ Consists of
  - lifecycle management commands (`sesman-start`, `sesman-kill` and `sesman-restart`), and
  - association management commands (`sesman-link-with-buffer`, `sesman-link-with-directory`, `sesman-link-with-project` and `sesman-unlink`). 
 
-From the user's prospective the work-flow is simple. Start a session, either with `sesman-start` (`C-c C-s C-s`) or some of the system specific commands (`run-xyz`, `xyz-jack-in` etc). On startup each session is automatically associated with the least specific context (commonly a project). In the most common case the user has only one session open per project. In such case, no ambiguity arises when a system retrieves the current session. If none or multiple sessions are associated with current context, the user is asked to resolve the ambiguity. Currently, in order to resolve ambiguity in presence of multiple sessions per project the user has to associates the session with a more specific contexts (directory or buffer). In the future there will be a provision to resolve the ambiguity automatically through the recency ordering (see below).
+From the user's prospective the work-flow is as follow. Start a session, either with `sesman-start` (`C-c C-s C-s`) or some of the system specific commands (`run-xyz`, `xyz-jack-in` etc). On startup each session is automatically associated with the least specific context (commonly a project). In the most common case the user has only one session open per project. In such case, no ambiguity arises when a system retrieves the current session. If multiple sessions are associated with the current context and `sesman-disambiguate-by-relevance` is `t`, the ambiguity is automatically resolved through the system specific relevance mechanism. Most commonly it will be the most recently used session.
 
-Currently there is only one custom variable, `sesman-1-to-1-links`, which lists context types for which `1-to-1` associations are desired (defaults to `'(directory buffer)`. This means, that each time the user links a session with a directory, any previous associations with that directory are lost. For context types not in this list (e.g. `project`), 1-to-many associations are allowed. 
+By default links with projects and directories are many-to-many in the sense that any session can be linked to multiple context and each context can be associated with multiple sessions. Buffers instead are 1-to-many. One buffer can be associated with only one session and a session can be associated with multiple buffers. This behavior is controlled by a custom `sesman-1-to-1-links`.
 
 ### [System Interface][]
 
-Consists of several generics, of which only first two are strictly required:
+Consists of several generics, of which only first three are strictly required:
 
   - `sesman-start-session`
   - `sesman-kill-session`
-  - `sesman-restart-session` - defaults to `sesman-start-session` + `sesman-kill-session`
-  - `sesman-more-relevant-p` - used for sorting sessions in "recency" order. Defaults to sorting by session name.
-  <!-- - `sesman-friendly-session-p` - used to define friendly sessions (e.g. dependency projects). -->
+  - `sesman-restart-session`
+  - `sesman-session-info`
+  - `sesman-context-types`
+  - `sesman-more-relevant-p`
   
-Depending on the purpose at hand, sesman system can use several functions to retrieve sessions (`sesman-ensure-linked-session`, `sesman-linked-sessions`, `sesman-friendly-sessions`  and `sesman-sessions`). Most important of these being `sesman-ensure-linked-session` which should be used to ensure that at least one session is linked to the current context. It returns the most specific session given sesman associations already in place. In case of ambiguity (or no sessions) the user is asked for a session.
+Sesman also provides [a range of utility functions][system api] functions to manipulate sessions, links and session components. Systems can register entire sessions with `sesman-register` or add/remove objects one by one with `sesman-add-object`/`sesman-remove-object`.
 
-Systems could directly use user level commands to manage sessions (`sesman-start`, `sesman-kill`) or use legacy system specific initializer (`run-xyz`, `xyz-jack-in` etc). In the latter case, systems should call `sesman-register` to register their sessions with `sesman`.
+Systems should link [sesman map][] into their key-maps (ideally on `C-c C-s`) and install sesman menu with `sesman-install-menu`. 
 
-Systems should link [semsna map][] into their modes' key-maps (ideally on `C-c C-s`, which is a good mnemonic, is free in CIDER and already does similar things in ESS).
+<!-- , which is a good mnemonic and is already used in CIDER and ESS. -->
 
 
-[user interface]: https://github.com/vspinu/sesman/blob/master/sesman.el#L55
-[system interface]: https://github.com/vspinu/sesman/blob/master/sesman.el#L216
-[sesman map]: https://github.com/vspinu/sesman/blob/master/sesman.el#L168
+[user interface]: https://github.com/vspinu/sesman/blob/master/sesman.el#L242
+[sesman map]: https://github.com/vspinu/sesman/blob/master/sesman.el#L331
+[system interface]: https://github.com/vspinu/sesman/blob/master/sesman.el#L379
+[system api]: https://github.com/vspinu/sesman/blob/master/sesman.el#L411
 
 [cider]: https://github.com/clojure-emacs/cider
 [ess]: https://ess.r-project.org/

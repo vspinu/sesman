@@ -407,26 +407,9 @@ provide a more meaningful ordering. If your system objects are buffers you
 can use `sesman-more-relevant-p' utility in this method."
   (not (string-greaterp (car session1) (car session2))))
 
-;; (cl-defgeneric sesman-session-object-type (system)
-;;   "Return type (a symbol) of the constituents of the session object.
-;; Depending on this type, sesman might provide additional
-;; functionality (e.g. a better default for
-;; `sesman-more-relevant-p'). Currently only 'buffer is understood."
-;;   nil)
-
-;; (cl-defgeneric sesman-friendly-session-p (system session)
-;;   "Non-nil if SYSTEM's SESSION is friendly to current context.
-;; A friendly session is the one for which it makes sense to create
-;; an association with current contexts.  For example, if the user
-;; is within the project A which is required (dependent upon) from
-;; project B, then a session opened within project B is a friendly
-;; session for current context.  By default, there all sessions are
-;; friendly sessions."
-;;   ;; by default all are friendly sessions
-;;   t)
-
 
 ;;; System API
+
 (defun sesman-session (system session-name)
   "Retrieve SYSTEM's session with SESSION-NAME from global hash."
   (let ((system (or system (sesman--system))))
