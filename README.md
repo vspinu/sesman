@@ -1,15 +1,13 @@
 [![License GPL 3][badge-license]](http://www.gnu.org/licenses/gpl-3.0.txt)
 [![MELPA](http://melpa.org/packages/cider-badge.svg)](http://melpa.org/#/sesman)
 [![MELPA Stable](http://stable.melpa.org/packages/sesman-badge.svg)](http://stable.melpa.org/#/sesman)
-[![Build Status](https://travis-ci.org/vspinu/sesman.png?branch=master)](https://travis-ci.org/vspinu/sesman)
+[![Build Status](https://travis-ci.org/vspinu/sesman.svg?branch=master)](https://travis-ci.org/vspinu/sesman)
 
-## Generic session manager for Emacs
+## Generic Session Manager for Emacs
 
-This is a brief overview. Please see the code for more details.
+Sesman provides facilities for session management and interactive session association with the current contexts (e.g. project, directory, buffers). While sesman can be used to manage arbitrary "sessions", it primary targets the Emacs based IDEs ([CIDER][], [ESS][], [Geiser][], [Robe][], [SLIME][] etc.)
 
-Sesman provides facilities for session management and interactive session association with current contexts. While "sessions" is a broad and implementation specific concept, the primary target of `sesman` are Emacs based IDEs ([CIDER][], [ESS][], [Geiser][], [Robe][], [SLIME][] etc.)
-
-For Emacs based IDEs, session is commonly composed of one or more physical processes (sub-processes, sockets, websockets etc). For example in the current implementation of [CIDER][] a session would be composed of one or more sesman connections (Clojre or ClojureScript). Each [CIDER][] connection consists of user REPL buffer and two sub-processes, one for user eval communication and another for tooling (completion, inspector etc).
+For Emacs based IDEs, session are commonly composed of one or more physical processes (sub-processes, sockets, websockets etc). For example in the current implementation of [CIDER][] a session would be composed of one or more sesman connections (Clojre or ClojureScript). Each [CIDER][] connection consists of user REPL buffer and two sub-processes, one for user eval communication and another for tooling (completion, inspector etc).
 
 ### Concepts:
 

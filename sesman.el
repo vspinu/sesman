@@ -1,4 +1,4 @@
-;;; sesman.el --- Session and connection manager interface -*- lexical-binding: t -*-
+;;; sesman.el --- Generic Session Manager for Emacs -*- lexical-binding: t -*-
 ;;
 ;; Copyright (C) 2018, Vitalie Spinu
 ;; Author: Vitalie Spinu
@@ -28,6 +28,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Commentary:
+;;
+;; Sesman provides facilities for session management and interactive session
+;; association with the current contexts (project, directory, buffers etc). See
+;; project's readme for more details.
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
