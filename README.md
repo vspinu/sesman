@@ -26,7 +26,7 @@ Consists of
 
 From the user's prospective the work-flow is as follow. Start a session, either with `sesman-start` (`C-c C-s C-s`) or some of the system specific commands (`run-xyz`, `xyz-jack-in` etc). On startup each session is automatically associated with the least specific context (commonly a project). In the most common case the user has only one session open per project. In such case, no ambiguity arises when a system retrieves the current session. If multiple sessions are associated with the current context and `sesman-disambiguate-by-relevance` is `t`, the ambiguity is automatically resolved through the system specific relevance mechanism. Most commonly it will be the most recently used session.
 
-By default links with projects and directories are many-to-many in the sense that any session can be linked to multiple context and each context can be associated with multiple sessions. Buffers instead are 1-to-many. One buffer can be associated with only one session and a session can be associated with multiple buffers. This behavior is controlled by a custom `sesman-1-to-1-links`.
+By default links with projects and directories are many-to-many in the sense that any session can be linked to multiple context and each context can be associated with multiple sessions. Buffers instead are 1-to-many. One buffer can be associated with only one session and a session can be associated with multiple buffers. This behavior is controlled by a custom `sesman-single-link-contexts`.
 
 ### [System Interface][]
 
