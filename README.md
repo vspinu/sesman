@@ -1,3 +1,7 @@
+[![License GPL 3][badge-license]](http://www.gnu.org/licenses/gpl-3.0.txt)
+[![MELPA](http://melpa.org/packages/cider-badge.svg)](http://melpa.org/#/sesman)
+[![MELPA Stable](http://stable.melpa.org/packages/sesman-badge.svg)](http://stable.melpa.org/#/sesman)
+[![Build Status](https://travis-ci.org/vspinu/sesman.png?branch=master)](https://travis-ci.org/vspinu/sesman)
 
 ## Generic session manager for Emacs
 
