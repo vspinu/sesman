@@ -32,13 +32,14 @@
 ;;; Commentary:
 ;;
 ;; Sesman provides facilities for session management and interactive session
-;; association with the current contexts (project, directory, buffers etc). See
+;; association with the current contexts (project, directory, buffers etc).  See
 ;; project's readme for more details.
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Code:
 
+(require 'cl-generic)
 (require 'project)
 (require 'seq)
 (require 'subr-x)
@@ -50,9 +51,9 @@
 
 (defcustom sesman-disambiguate-by-relevance t
   "If t choose most relevant session in ambiguous situations, otherwise ask.
-Ambiguity arises when multiple sessions are associated with current context. By
-default only projects could be associated with multiple sessions. See
-`sesman-single-link-contexts' in order to change that. Relevance is decided by
+Ambiguity arises when multiple sessions are associated with current context.  By
+default only projects could be associated with multiple sessions.  See
+`sesman-single-link-contexts' in order to change that.  Relevance is decided by
 system's implementation, see `sesman-more-relevant-p'."
   :group 'sesman
   :type 'boolean)
@@ -108,14 +109,16 @@ Can be either a symbol, or a function returning a symbol.")
 (defun sesman--link-session (system session &optional cxt-type)
   (let* ((ses-name (or (car-safe session)
                        (error "SESSION must be a headed list")))
-         (cxt-val (or (if cxt-type
-                          (sesman-context cxt-type)
-                        (seq-some (lambda (ctype)
-                                    (let ((val (sesman-context ctype)))
-                                      (setq cxt-type ctype)
-                                      val))
-                                  (reverse (sesman-context-types system))))
-                      (user-error "No local context of type %s" cxt-type)))
+         (cxt-val (sesman--expand-path-maybe
+                   (or (if cxt-type
+                           (sesman-context cxt-type)
+                         ;; use the lest specific context-type available
+                         (seq-some (lambda (ctype)
+                                     (let ((val (sesman-context ctype)))
+                                       (setq cxt-type ctype)
+                                       val))
+                                   (reverse (sesman-context-types system))))
+                       (user-error "No local context of type %s" cxt-type))))
          (key (cons system ses-name))
          (link (list key cxt-type cxt-val)))
     (if (member cxt-type sesman-single-link-context-types)
@@ -145,6 +148,13 @@ Can be either a symbol, or a function returning a symbol.")
          (error (format "%s association not allowed for this system (%s)"
                         ,(capitalize (symbol-name cxt-type))
                         system))))))
+
+(defun sesman--expand-path-maybe (obj)
+  (cond
+   ((stringp obj) (expand-file-name obj))
+   ((and (consp obj) (stringp (cdr obj)))
+    (cons (car obj) (expand-file-name (cdr obj))))
+   (t obj)))
 
 ;; FIXME: incorporate `sesman-abbreviate-paths'
 (defun sesman--abbrev-path-maybe (obj)
@@ -181,7 +191,10 @@ Can be either a symbol, or a function returning a symbol.")
     (lambda (el)
       (and (or (null system) (eq (caar el) system))
            (or (null ses-name) (equal (cdar el) ses-name))
-           (or (null cxt-type) (eq (nth 1 el) cxt-type))
+           (or (null cxt-type)
+               (if (listp cxt-type)
+                   (member (nth 1 el) cxt-type)
+                 (eq (nth 1 el) cxt-type)))
            (or (null cxt-val) (equal (nth 2 el) cxt-val))))))
 
 (defun sesman--unlink (x)
@@ -304,7 +317,7 @@ sessions."
   "Display links active in the current context."
   (interactive)
   (let* ((system (sesman--system))
-         (links (sesman-links system)))
+         (links (sesman-current-links system)))
     (if links
         (message (mapconcat #'sesman--format-link links "\n"))
       (message "No %s links in the current context" system))))
@@ -328,7 +341,7 @@ sessions."
   "Break any of the previously created links."
   (interactive)
   (let* ((system (sesman--system))
-         (links (or (sesman-links system)
+         (links (or (sesman-current-links system)
                     (user-error "No %s links found" system))))
     (mapc #'sesman--unlink
           (sesman--ask-for-link "Unlink: " links 'ask-all))))
@@ -495,7 +508,7 @@ list returned from `sesman-context-types'."
     (sesman--clear-links)
     (mapcar (lambda (assoc)
               (gethash (car assoc) sesman-sessions-hashmap))
-            (sesman-links system cxt-types))))
+            (sesman-current-links system cxt-types))))
 
 (defun sesman-ensure-linked-session (system &optional prompt ask-new ask-all)
   "Ensure that at least one SYSTEM session is linked to the current context.
@@ -509,7 +522,7 @@ nil, in which case ASK-NEW and ASK-ALL are passed directly to
     (cond
      ;; 0. No sessions; throw
      ((null sessions)
-      (user-error "No linked %s sessions for current context" system))
+      (user-error "No linked %s sessions in current context" system))
      ;; 1. Single association, or auto-disambiguate; return first
      ((or sesman-disambiguate-by-relevance
           (eq (length sessions) 1))
@@ -556,7 +569,12 @@ If AS-STRING is non-nil, return an equivalent string representation."
                      " ")
         out))))
 
-(defun sesman-links (system &optional cxt-types)
+(defun sesman-links (system &optional session-name cxt-types)
+  "Retrieve all links for SYSTEM, SESSION-NAME and CXT-TYPES."
+  (let ((lfn (sesman--link-lookup-fn system session-name cxt-types)))
+    (seq-filter lfn sesman-links-alist)))
+
+(defun sesman-current-links (system &optional cxt-types)
   "Retrieve all active links in current context for SYSTEM.
 CXT-TYPES is a list of context types to consider.  Returned links
 are a subset of `sesman-links-alist' sorted in order of relevance."
@@ -591,9 +609,9 @@ CXT-TYPES defaults to `sesman-context-types' for current SYSTEM."
 
 (defun sesman-register (system session)
   "Register SESSION into `sesman-sessions-hashmap' and `sesman-links-alist'.
-SYSTEM defaults to current system. If a session with same name is already
+SYSTEM defaults to current system.  If a session with same name is already
 registered in `sesman-sessions-hashmap', change the name by appending \"#1\",
-\"#2\" ... to the name. This function should be called by system-specific
+\"#2\" ... to the name.  This function should be called by system-specific
 connection initializers (\"run-xyz\", \"xyz-jack-in\" etc.)."
   (let* ((system (or system (sesman--system)))
          (ses-name (car session))
@@ -631,11 +649,13 @@ session (list SESSION-NAME OBJECT)."
 
 (defun sesman-remove-object (system session-name object &optional auto-unregister no-error)
   "Remove (destructively) OBJECT from session SESSION-NAME of SYSTEM.
-If SESSION-NAME is nil, retrieve the session with `sesman-session-for-object'.
-If OBJECT is the last object in sesman session, `sesman-unregister' the session.
-If AUTO-UNREGISTER is non-nil unregister sessions of length 0. If NO-ERROR is
-non-nil, don't throw an error if OBJECT is not found in any session. This is
-useful if there are several \"concurrent\" parties which can remove the object."
+If SESSION-NAME is nil, retrieve the session with
+`sesman-session-for-object'.  If OBJECT is the last object in sesman
+session, `sesman-unregister' the session.  If AUTO-UNREGISTER is non-nil
+unregister sessions of length 0 and remove all the links with the session.
+If NO-ERROR is non-nil, don't throw an error if OBJECT is not found in any
+session.  This is useful if there are several \"concurrent\" parties which
+can remove the object."
   (let* ((system (or system (sesman--system)))
          (session (if session-name
                       (sesman-session system session-name)
@@ -705,12 +725,12 @@ buffers."
 (cl-defmethod sesman-relevant-context-p ((_cxt-type (eql directory)) dir)
   "Non-nil if DIR is the parent or equals the `default-directory'."
   (when (and dir default-directory)
-    (string-match-p (concat "^" dir) default-directory)))
+    (string-match-p (concat "^" dir) (expand-file-name default-directory))))
 (cl-defmethod sesman-relevant-context-p ((_cxt-type (eql project)) proj)
   "Non-nil if PROJ is the parent or equals the `default-directory'."
   (when (and proj default-directory)
-    (string-match-p (concat "^" (expand-file-name (cdr proj)))
-                    default-directory)))
+    (string-match-p (concat "^" (cdr proj))
+                    (expand-file-name default-directory))))
 
 
 (provide 'sesman)
