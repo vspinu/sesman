@@ -49,14 +49,14 @@
   :prefix "sesman-"
   :group 'tools)
 
-(defcustom sesman-disambiguate-by-relevance t
-  "If t choose most relevant session in ambiguous situations, otherwise ask.
-Ambiguity arises when multiple sessions are associated with current context.  By
-default only projects could be associated with multiple sessions.  See
-`sesman-single-link-contexts' in order to change that.  Relevance is decided by
-system's implementation, see `sesman-more-relevant-p'."
-  :group 'sesman
-  :type 'boolean)
+;; (defcustom sesman-disambiguate-by-relevance t
+;;   "If t choose most relevant session in ambiguous situations, otherwise ask.
+;; Ambiguity arises when multiple sessions are associated with current context.  By
+;; default only projects could be associated with multiple sessions.  See
+;; `sesman-single-link-contexts' in order to change that.  Relevance is decided by
+;; system's implementation, see `sesman-more-relevant-p'."
+;;   :group 'sesman
+;;   :type 'boolean)
 
 (defcustom sesman-single-link-context-types '(buffer)
   "List of context types to which at most one session can be linked."
@@ -508,28 +508,12 @@ list returned from `sesman-context-types'."
               (gethash (car assoc) sesman-sessions-hashmap))
             (sesman-current-links system cxt-types))))
 
-(defun sesman-ensure-linked-session (system &optional prompt ask-new ask-all)
+(defun sesman-ensure-linked-session (system)
   "Ensure that at least one SYSTEM session is linked to the current context.
-If there is an unambiguous link in place, return that session, otherwise
-ask for a session with PROMPT.  ASK-NEW and ASK-ALL have an effect only when
-there are multiple associations and `sesman-disambiguate-by-relevance' is
-nil, in which case ASK-NEW and ASK-ALL are passed directly to
-`sesman-ask-for-session'."
-  (let ((prompt (or prompt (format "%s session: " (sesman--cap-system-name system))))
-        (sessions (sesman-linked-sessions system)))
-    (cond
-     ;; 0. No sessions; throw
-     ((null sessions)
-      (user-error "No linked %s sessions in current context" system))
-     ;; 1. Single association, or auto-disambiguate; return first
-     ((or sesman-disambiguate-by-relevance
-          (eq (length sessions) 1))
-      (if ask-all
-          sessions
-        (car sessions)))
-     ;; 2. Multiple ambiguous associations; ask
-     (sessions
-      (sesman-ask-for-session system prompt sessions ask-new ask-all)))))
+If there is at least one linked session, return the most relevant session.
+Otherwise throw an error."
+  (or (car (sesman-linked-sessions system))
+      (user-error "No %s sessions linked to current context" system)))
 
 (defun sesman-session-links (system session &optional as-string)
   "Retrieve all links for SYSTEM's SESSION from the global `SESSION-LINKS'.
