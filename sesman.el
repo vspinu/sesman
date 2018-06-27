@@ -210,11 +210,11 @@ Can be either a symbol, or a function returning a symbol.")
 
 (defun sesman--format-link (link)
   (let ((val (sesman--abbrev-path-maybe
-              (sesman--link-value link))))
+              (sesman--lnk-value link))))
     (format "%s(%s)->%s"
-            (sesman--link-context-type link)
+            (sesman--lnk-context-type link)
             (if (listp val) (cdr val) val)
-            (propertize (sesman--link-session-name link) 'face 'bold))))
+            (propertize (sesman--lnk-session-name link) 'face 'bold))))
 
 (defun sesman--ask-for-link (prompt links &optional ask-all)
   (let* ((name.keys (mapcar (lambda (link)
@@ -232,18 +232,6 @@ Can be either a symbol, or a function returning a symbol.")
           (t
            (cdr (assoc sel name.keys))))))
 
-(defun sesman--link-system-name (link)
-  (caar link))
-
-(defun sesman--link-session-name (link)
-  (cdar link))
-
-(defun sesman--link-context-type (link)
-  (cadr link))
-
-(defun sesman--link-value (link)
-  (nth 2 link))
-
 (defun sesman--sort-sessions (system sessions)
   (seq-sort (lambda (x1 x2)
               (sesman-more-relevant-p system x1 x2))
@@ -255,6 +243,16 @@ Can be either a symbol, or a function returning a symbol.")
                                       (gethash (car x1) sesman-sessions-hashmap)
                                       (gethash (car x2) sesman-sessions-hashmap)))
             links))
+
+;; link data structure accessors
+(defun sesman--lnk-system-name (lnk)
+  (caar lnk))
+(defun sesman--lnk-session-name (lnk)
+  (cdar lnk))
+(defun sesman--lnk-context-type (lnk)
+  (cadr lnk))
+(defun sesman--lnk-value (lnk)
+  (nth 2 lnk))
 
 
 ;;; User Interface
@@ -550,8 +548,8 @@ If AS-STRING is non-nil, return an equivalent string representation."
          (out (mapcar (lambda (x) (list x))
                       (sesman-context-types system))))
     (mapc (lambda (link)
-            (let* ((type (sesman--link-context-type link))
-                   (val (sesman--link-value link))
+            (let* ((type (sesman--lnk-context-type link))
+                   (val (sesman--lnk-value link))
                    (entry (assoc type out)))
               (when entry
                 (setcdr entry (cons val (cdr entry))))))
@@ -597,10 +595,10 @@ CXT-TYPES defaults to `sesman-context-types' for current SYSTEM."
         (found))
     (condition-case nil
         (mapc (lambda (l)
-                (when (eq system (sesman--link-system-name l))
-                  (let ((cxt (sesman--link-context-type l)))
+                (when (eq system (sesman--lnk-system-name l))
+                  (let ((cxt (sesman--lnk-context-type l)))
                     (when (and (member cxt cxt-types)
-                               (sesman-relevant-context-p cxt (sesman--link-value l)))
+                               (sesman-relevant-context-p cxt (sesman--lnk-value l)))
                       (setq found t)
                       (throw 'found nil)))))
               sesman-links-alist)
