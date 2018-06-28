@@ -4,7 +4,7 @@
 ;; Author: Vitalie Spinu
 ;; URL: https://github.com/vspinu/sesman
 ;; Keywords: process
-;; Version: 0.1.1
+;; Version: 0.1.1-snapshot
 ;; Package-Requires: ((emacs "25"))
 ;; Keywords: processes, tools, vc
 ;;
@@ -257,6 +257,7 @@ Can be either a symbol, or a function returning a symbol.")
 
 ;;; User Interface
 
+ ;;;###autoload
 (defun sesman-start ()
   "Start sesman session."
   (interactive)
@@ -264,6 +265,7 @@ Can be either a symbol, or a function returning a symbol.")
     (message "Starting new %s session ..." system)
     (sesman-start-session system)))
 
+ ;;;###autoload
 (defun sesman-restart ()
   "Restart sesman session."
   (interactive)
@@ -272,6 +274,7 @@ Can be either a symbol, or a function returning a symbol.")
     (message "Restarting %s '%s' session" system (car old-session))
     (sesman-restart-session system old-session)))
 
+ ;;;###autoload
 (defun sesman-quit (which)
   "Terminate sesman session.
 When WHICH is nil, kill only the current session; when a single
@@ -291,6 +294,7 @@ double universal argument, t or 'all, kill all sessions."
        (if (= 1 (length sessions)) "session" "sessions")
        (mapcar #'car sessions)))))
 
+ ;;;###autoload
 (defun sesman-show-session-info (which)
   "Display session(s) info.
 When WHICH is nil, show info for current session; when a single
@@ -311,6 +315,7 @@ sessions."
                   "\n"))
       (message "No %s sessions" system))))
 
+ ;;;###autoload
 (defun sesman-show-links ()
   "Display links active in the current context."
   (interactive)
@@ -320,21 +325,25 @@ sessions."
         (message (mapconcat #'sesman--format-link links "\n"))
       (message "No %s links in the current context" system))))
 
+ ;;;###autoload
 (defun sesman-link-with-buffer ()
   "Associate a session with current buffer."
   (interactive)
   (sesman--link-session-interactively buffer))
 
+ ;;;###autoload
 (defun sesman-link-with-directory ()
   "Associate a session with current directory."
   (interactive)
   (sesman--link-session-interactively directory))
 
+ ;;;###autoload
 (defun sesman-link-with-project ()
   "Associate a session with current project."
   (interactive)
   (sesman--link-session-interactively project))
 
+ ;;;###autoload
 (defun sesman-unlink ()
   "Break any of the previously created links."
   (interactive)
@@ -385,7 +394,7 @@ sessions."
   "Sesman Menu.")
 
 (defun sesman-install-menu (map)
-  "Install `sesman-menu' into MAP ."
+  "Install `sesman-menu' into MAP."
   (easy-menu-do-define 'seman-menu-open
                        map
                        (get 'sesman-menu 'variable-documentation)
