@@ -496,6 +496,12 @@ return a list of sessions, otherwise a single session."
 CXT-TYPES is as in `sesman-linked-sessions'."
   (car (sesman-linked-sessions system cxt-types)))
 
+(defun sesman-ensure-session (system &optional cxt-types)
+  "Get the most relevant linked session for SYSTEM or throw if none exists.
+CXT-TYPES is as in `sesman-linked-sessions'."
+  (or (car (sesman-linked-sessions system))
+      (user-error "No linked %s sessions" system)))
+
 (defun sesman-linked-sessions (system &optional cxt-types)
   "Return a list of SYSTEM sessions linked in current context.
 CXT-TYPES is a list of context types to consider.  Defaults to the
@@ -507,13 +513,6 @@ list returned from `sesman-context-types'."
     (mapcar (lambda (assoc)
               (gethash (car assoc) sesman-sessions-hashmap))
             (sesman-current-links system cxt-types))))
-
-(defun sesman-ensure-linked-session (system)
-  "Ensure that at least one SYSTEM session is linked to the current context.
-If there is at least one linked session, return the most relevant session.
-Otherwise throw an error."
-  (or (car (sesman-linked-sessions system))
-      (user-error "No %s sessions linked to current context" system)))
 
 (defun sesman-session-links (system session &optional as-string)
   "Retrieve all links for SYSTEM's SESSION from the global `SESSION-LINKS'.
