@@ -62,7 +62,8 @@
 (defcustom sesman-single-link-context-types '(buffer)
   "List of context types to which at most one session can be linked."
   :group 'sesman
-  :type '(repeat symbol))
+  :type '(repeat symbol)
+  :package-version '(sesman . "0.1.0"))
 
 ;; FIXME:
 ;; (defcustom sesman-abbreviate-paths 2
