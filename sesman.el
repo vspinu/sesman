@@ -47,7 +47,8 @@
 (defgroup sesman nil
   "Generic Session Manager."
   :prefix "sesman-"
-  :group 'tools)
+  :group 'tools
+  :link '(url-link :tag "GitHub" "https://github.com/vspinu/sesman"))
 
 ;; (defcustom sesman-disambiguate-by-relevance t
 ;;   "If t choose most relevant session in ambiguous situations, otherwise ask.
