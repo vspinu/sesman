@@ -63,7 +63,7 @@
   :group 'sesman
   :type '(repeat symbol))
 
-;; fixme;
+;; FIXME:
 ;; (defcustom sesman-abbreviate-paths 2
 ;;   "Abbreviate paths to that many parents.
 ;; When set to nil, don't abbreviate directories."
