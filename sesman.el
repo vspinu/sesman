@@ -261,7 +261,7 @@ Can be either a symbol, or a function returning a symbol.")
 (defun sesman-start ()
   "Start sesman session."
   (interactive)
-  (let* ((system (sesman--system)))
+  (let ((system (sesman--system)))
     (message "Starting new %s session ..." system)
     (sesman-start-session system)))
 
