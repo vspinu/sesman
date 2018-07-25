@@ -15,9 +15,9 @@ For Emacs based IDEs, session are commonly composed of one or more physical proc
   - "system" is generic name used for a tool which uses sesman (e.g. `CIDER`, `ESS` etc)
   - "contexts" are Emacs objects which describe current context. For example `current-buffer`, `default-directory` and `project-current` are such contexts. Context objects are used to create associations (links) between the current context and sessions. At any given time the user can link (unlink) sessions to (from) contexts. By default there are three types of contexts - buffer, directory and project, but systems can define their own specialized context types..
   
-Sesman is composed of two parts, [user interface][], available as a [sesman map][] and menu, and [system interface][] consisting of a few generics and API functions.
+Sesman is composed of two parts, user interface, available as a sesman map and menu, and system interface consisting of a few generics and API functions.
 
-### [User Interface][]
+### User Interface
 
 Consists of 
 
@@ -28,7 +28,7 @@ From the user's prospective the work-flow is as follow. Start a session, either 
 
 By default links with projects and directories are many-to-many in the sense that any session can be linked to multiple context and each context can be associated with multiple sessions. Buffers instead are 1-to-many. One buffer can be associated with only one session and a session can be associated with multiple buffers. This behavior is controlled by a custom `sesman-single-link-context-types`.
 
-### [System Interface][]
+### System Interface
 
 Consists of several generics, of which only first three are strictly required:
 
@@ -41,15 +41,14 @@ Consists of several generics, of which only first three are strictly required:
   
 Sesman also provides [a range of utility functions][system api] functions to manipulate sessions, links and session components. Systems can register entire sessions with `sesman-register` or add/remove objects one by one with `sesman-add-object`/`sesman-remove-object`.
 
-Systems should link [sesman map][] into their key-maps (ideally on `C-c C-s`) and install sesman menu with `sesman-install-menu`. 
+Systems should link sesman map into their key-maps (ideally on `C-c C-s`) and install sesman menu with `sesman-install-menu`. 
+
+### Implementations
+
+  - [CIDER implementation](http://docs.cider.mx/en/latest/managing_connections/)
 
 <!-- , which is a good mnemonic and is already used in CIDER and ESS. -->
 
-
-[user interface]: https://github.com/vspinu/sesman/blob/master/sesman.el#L242
-[sesman map]: https://github.com/vspinu/sesman/blob/master/sesman.el#L331
-[system interface]: https://github.com/vspinu/sesman/blob/master/sesman.el#L379
-[system api]: https://github.com/vspinu/sesman/blob/master/sesman.el#L411
 
 [cider]: https://github.com/clojure-emacs/cider
 [ess]: https://ess.r-project.org/
