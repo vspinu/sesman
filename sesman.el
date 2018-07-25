@@ -40,7 +40,6 @@
 ;;; Code:
 
 (require 'cl-generic)
-(require 'project)
 (require 'seq)
 (require 'subr-x)
 
@@ -152,19 +151,15 @@ Can be either a symbol, or a function returning a symbol.")
                         system))))))
 
 (defun sesman--expand-path-maybe (obj)
-  (cond
-   ((stringp obj) (expand-file-name obj))
-   ((and (consp obj) (stringp (cdr obj)))
-    (cons (car obj) (expand-file-name (cdr obj))))
-   (t obj)))
+  (if (stringp obj)
+      (expand-file-name obj)
+    obj))
 
 ;; FIXME: incorporate `sesman-abbreviate-paths'
 (defun sesman--abbrev-path-maybe (obj)
-  (cond
-   ((stringp obj) (abbreviate-file-name obj))
-   ((and (consp obj) (stringp (cdr obj)))
-    (cons (car obj) (abbreviate-file-name (cdr obj))))
-   (t obj)))
+  (if (stringp obj)
+      (abbreviate-file-name obj)
+    obj))
 
 (defun sesman--system ()
   (if sesman-system
@@ -422,9 +417,11 @@ By default, calls `sesman-quit-session' and then
 (cl-defgeneric sesman-session-info (_system session)
   (cdr session))
 
-(cl-defgeneric sesman-context-types (_system)
-  "Return a list of context types understood by SYSTEM."
-  '(buffer directory project))
+(cl-defgeneric sesman-project (system)
+  "Retrieve project root for SYSTEM in directory DIR.
+DIR defaults to `default-directory'. Return a string or nil if no project has
+been found."
+  nil)
 
 (cl-defgeneric sesman-more-relevant-p (_system session1 session2)
   "Return non-nil if SESSION1 should be sorted before SESSION2.
@@ -432,6 +429,10 @@ By default, sort by session name. Systems should overwrite this method to
 provide a more meaningful ordering. If your system objects are buffers you can
 use `sesman-more-recent-p' utility in this method."
   (not (string-greaterp (car session1) (car session2))))
+
+(cl-defgeneric sesman-context-types (_system)
+  "Return a list of context types understood by SYSTEM."
+  '(buffer directory project))
 
 
 ;;; System API
@@ -706,7 +707,11 @@ buffers."
   default-directory)
 (cl-defmethod sesman-context ((_cxt-type (eql project)))
   "Return current project."
-  (project-current))
+  (or
+   (sesman-project (sesman--system))
+   (progn
+     (require 'project)
+     (car (project-roots (project-current))))))
 
 (cl-defgeneric sesman-relevant-context-p (_cxt-type cxt)
   "Non-nil if context CXT is relevant to current context of type CXT-TYPE.")
@@ -720,7 +725,7 @@ buffers."
 (cl-defmethod sesman-relevant-context-p ((_cxt-type (eql project)) proj)
   "Non-nil if PROJ is the parent or equals the `default-directory'."
   (when (and proj default-directory)
-    (string-match-p (concat "^" (cdr proj))
+    (string-match-p (concat "^" proj)
                     (expand-file-name default-directory))))
 
 
