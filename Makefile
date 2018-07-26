@@ -16,7 +16,7 @@ checkdoc: version
 	$(EMACS) --batch --load targets/checkdoc.el
 
 test: version
-	$(EMACS) --batch --load sesman-test.el --funcall ert-run-tests-batch-and-exit
+	$(EMACS) --batch --directory . --load sesman-test.el --funcall ert-run-tests-batch-and-exit
 
 version:
 	@echo SESMAN: $(VERSION)
