@@ -725,8 +725,6 @@ buffers."
 
 
 ;;; Contexts
-(require 'project)
-
 (cl-defgeneric sesman-context (_cxt-type)
   "Given context type CXT-TYPE return the context.")
 (cl-defmethod sesman-context ((_cxt-type (eql buffer)))
@@ -739,10 +737,11 @@ buffers."
   "Return current project."
   (or
    (sesman-project (sesman--system))
-   (progn
-     (let ((proj (project-current)))
-       (when proj
-         (car (project-roots proj)))))))
+   ;; Normally we would use (project-roots (project-current)) but currently
+   ;; project-roots fails on nil and doesn't work on custom `('foo .
+   ;; "path/to/project"). So, use vc as a fallback and don't use project.el at
+   ;; all for now.
+   (vc-root-dir)))
 
 (cl-defgeneric sesman-relevant-context-p (_cxt-type cxt)
   "Non-nil if context CXT is relevant to current context of type CXT-TYPE.")
