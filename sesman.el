@@ -113,10 +113,10 @@ Can be either a symbol, or a function returning a symbol.")
          (cxt-val (or cxt-val
                       (sesman--expand-path-maybe
                        (or (if cxt-type
-                               (sesman-context cxt-type)
+                               (sesman-context cxt-type system)
                              ;; use the lest specific context-type available
                              (seq-some (lambda (ctype)
-                                         (let ((val (sesman-context ctype)))
+                                         (let ((val (sesman-context ctype system)))
                                            (setq cxt-type ctype)
                                            val))
                                        (reverse (sesman-context-types system))))
@@ -142,7 +142,7 @@ Can be either a symbol, or a function returning a symbol.")
                             system
                             (format "Link with %s %s: "
                                     cxt-name (sesman--abbrev-path-maybe
-                                              (sesman-context cxt-type)))
+                                              (sesman-context cxt-type system)))
                             (sesman--all-system-sessions system)
                             'ask-new))))
           (sesman--link-session system session cxt-type cxt-value))
@@ -639,7 +639,8 @@ connection initializers (\"run-xyz\", \"xyz-jack-in\" etc.)."
          (ses-name0 (car session))
          (i 1))
     (while (sesman-session system ses-name)
-      (setq ses-name (format "%s#%d" ses-name0 i)))
+      (setq ses-name (format "%s#%d" ses-name0 i)
+            i (1+ i)))
     (setq session (cons ses-name (cdr session)))
     (puthash (cons system ses-name) session sesman-sessions-hashmap)
     (sesman--link-session system session)
@@ -725,18 +726,18 @@ buffers."
 
 
 ;;; Contexts
-(cl-defgeneric sesman-context (_cxt-type)
+(cl-defgeneric sesman-context (_cxt-type _system)
   "Given context type CXT-TYPE return the context.")
-(cl-defmethod sesman-context ((_cxt-type (eql buffer)))
+(cl-defmethod sesman-context ((_cxt-type (eql buffer)) _system)
   "Return current buffer."
   (current-buffer))
-(cl-defmethod sesman-context ((_cxt-type (eql directory)))
+(cl-defmethod sesman-context ((_cxt-type (eql directory)) _system)
   "Return current directory."
   default-directory)
-(cl-defmethod sesman-context ((_cxt-type (eql project)))
+(cl-defmethod sesman-context ((_cxt-type (eql project)) system)
   "Return current project."
   (or
-   (sesman-project (sesman--system))
+   (sesman-project (or system (sesman--system)))
    ;; Normally we would use (project-roots (project-current)) but currently
    ;; project-roots fails on nil and doesn't work on custom `('foo .
    ;; "path/to/project"). So, use vc as a fallback and don't use project.el at
