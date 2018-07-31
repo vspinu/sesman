@@ -214,13 +214,43 @@ If SORT is non-nil, sort in relevance order."
                       (gethash (car x) sesman-sessions-hashmap))
                     sesman-links-alist)))
 
+(defun sesman--format-session-objects (system session &optional indent sep)
+  (let ((info (sesman-session-info system session)))
+    (if (and (listp info)
+             (keywordp (car info)))
+        (let ((ses-name (car session))
+              (indent (or indent 0))
+              (sep (or sep " "))
+              (map (plist-get info :map))
+              (strings (or (plist-get info :strings)
+                           (mapcar (lambda (x) (format "%s" x))
+                                   (plist-get info :objects)))))
+          (mapconcat (lambda (str)
+                       (let ((str (replace-regexp-in-string ses-name "%%s" str nil t)))
+                         (propertize str
+                                     'mouse-face 'highlight
+                                     'help-echo "mouse-2: visit this file in other window"
+                                     'keymap map)))
+                     strings sep))
+      (format "%s" info))))
+
+(defun sesman--format-session (system ses &optional prefix)
+  (format (propertize "%s%s [%s] linked-to %s" 'face 'bold)
+          (or prefix "")
+          (propertize (car ses) 'face 'bold)
+          (propertize (sesman--format-session-objects system ses 0 ", ") 'face 'italic)
+          (propertize (sesman-grouped-links system ses t t) 'face 'italic)))
+
 (defun sesman--format-link (link)
-  (let ((val (sesman--abbrev-path-maybe
-              (sesman--lnk-value link))))
-    (format "%s(%s) -> ses(%s)"
+  (let* ((system (sesman--lnk-system-name link))
+         (session (gethash (car link) sesman-sessions-hashmap)))
+    (format "%s(%s) -> %s [%s]"
             (sesman--lnk-context-type link)
-            val
-            (propertize (sesman--lnk-session-name link) 'face 'bold))))
+            (propertize (sesman--abbrev-path-maybe (sesman--lnk-value link)) 'face 'bold)
+            (propertize (sesman--lnk-session-name link) 'face 'bold)
+            (if session
+                (sesman--format-session-objects system session)
+              "invalid"))))
 
 (defun sesman--ask-for-link (prompt links &optional ask-all)
   (let* ((name.keys (mapcar (lambda (link)
@@ -300,35 +330,28 @@ t or 'all, kill all sessions."
        (if (= 1 (length sessions)) "session" "sessions")
        (mapcar #'car sessions)))))
 
-;;;###autoload
-(defun sesman-show-session-info (&optional which)
-  "Display session(s) info.
-When WHICH is nil, show info for current session; when a single universal
-argument or 'linked, show info for all linked sessions; when a double universal
-argument or 'all, show info for all sessions."
+;; ;;;###autoload
+(defun sesman-info (&optional all)
+  "Display linked sessions info.
+When ALL is non-nil, show info for all sessions."
   (interactive "P")
   (let* ((system (sesman--system))
-         (sessions (sesman--on-C-u-u-sessions system which)))
+         (i 1)
+         (sessions (if all
+                       (sesman-sessions system t)
+                     (sesman-linked-sessions system))))
     (if sessions
-        (message (mapconcat
-                  (lambda (ses)
-                    (format "%s [linked: %s]\n%s"
-                            (propertize (car ses) 'face 'bold)
-                            (sesman-session-links system ses t)
-                            (sesman-session-info system ses)))
-                  (delete-consecutive-dups sessions)
-                  "\n"))
-      (message "No %s sessions" system))))
-
-;;;###autoload
-(defun sesman-show-links ()
-  "Display links active in the current context."
-  (interactive)
-  (let* ((system (sesman--system))
-         (links (sesman-current-links system)))
-    (if links
-        (message (mapconcat #'sesman--format-link links "\n"))
-      (message "No %s links in the current context" system))))
+        (message (mapconcat (lambda (ses)
+                              (let ((prefix (if (> (length sessions) 1)
+                                                (if (sesman-relevant-session-p system ses)
+                                                    (prog1 (format "%d " i)
+                                                      (setq i (1+ i)))
+                                                  "  ")
+                                              "")))
+                                (sesman--format-session system ses prefix)))
+                            sessions
+                            "\n"))
+      (message "No %s %ssessions" system (if all "" "linked ")))))
 
 ;;;###autoload
 (defun sesman-link-with-buffer (&optional buffer session)
@@ -384,10 +407,8 @@ PROJECT defaults to current project. On universal argument, or if PROJECT is
 (defvar sesman-map
   (let (sesman-map)
     (define-prefix-command 'sesman-map)
-    (define-key sesman-map (kbd "C-i") #'sesman-show-session-info)
-    (define-key sesman-map (kbd   "i") #'sesman-show-session-info)
-    (define-key sesman-map (kbd "C-l") #'sesman-show-links)
-    (define-key sesman-map (kbd   "l") #'sesman-show-links)
+    (define-key sesman-map (kbd "C-i") #'sesman-info)
+    (define-key sesman-map (kbd   "i") #'sesman-info)
     (define-key sesman-map (kbd "C-s") #'sesman-start)
     (define-key sesman-map (kbd   "s") #'sesman-start)
     (define-key sesman-map (kbd "C-r") #'sesman-restart)
