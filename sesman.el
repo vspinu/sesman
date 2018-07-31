@@ -794,6 +794,20 @@ buffers."
     (string-match-p (concat "^" proj)
                     (expand-file-name default-directory))))
 
+(defun sesman-relevant-link-p (link &optional cxt-types)
+  "Return non-nil if LINK is relevant to the current context.
+If CXT-TYPES is non-nil, only check relevance for those contexts."
+  (when (or (null cxt-types)
+            (member (sesman--lnk-context-type lnk) cxt-types))
+    (sesman-relevant-context-p
+     (sesman--lnk-context-type link)
+     (sesman--lnk-value link))))
+
+(defun sesman-relevant-session-p (system session &optional cxt-types)
+  "Return non-nil if SYSTEM's SESSION is relevant to the current context.
+If CXT-TYPES is non-nil, only check relevance for those contexts."
+  (seq-some #'sesman-relevant-link-p
+            (sesman-links system session cxt-types)))
 
 (provide 'sesman)
 
