@@ -434,6 +434,8 @@ PROJECT defaults to current project. On universal argument, or if PROJECT is
     (define-prefix-command 'sesman-map)
     (define-key sesman-map (kbd "C-i") #'sesman-info)
     (define-key sesman-map (kbd   "i") #'sesman-info)
+    (define-key sesman-map (kbd "C-w") #'sesman-browser)
+    (define-key sesman-map (kbd   "w") #'sesman-browser)
     (define-key sesman-map (kbd "C-s") #'sesman-start)
     (define-key sesman-map (kbd   "s") #'sesman-start)
     (define-key sesman-map (kbd "C-r") #'sesman-restart)
@@ -453,8 +455,7 @@ PROJECT defaults to current project. On universal argument, or if PROJECT is
 
 (defvar sesman-menu
   '("Sesman"
-    ["Show Session Info" sesman-show-session-info]
-    ["Show Links" sesman-show-links]
+    ["Show Session Info" sesman-info]
     "--"
     ["Start" sesman-start]
     ["Restart" sesman-restart :active (sesman-connected-p)]
