@@ -12,6 +12,7 @@
   (bug-reference-bug-regexp . "#\\(?2:[[:digit:]]+\\)")
   (bug-reference-url-format . "https://github.com/vspinu/sesman/issues/%s"))
  (emacs-lisp-mode
+  (eval . (add-hook 'before-save-hook 'delete-trailing-whitespace nil t))
   (indent-tabs-mode)
   (fill-column . 80)
   (emacs-lisp-docstring-fill-column . 80)))
