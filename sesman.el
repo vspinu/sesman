@@ -101,6 +101,15 @@ Can be either a symbol, or a function returning a symbol.")
     (sesman-linked-sessions system))
    ((or (equal which '(16)) (eq which 'all) (eq which t))
     (sesman--all-system-sessions system 'sort))
+   ;; session itself
+   ((and (listp which)
+         (or (stringp (car which))
+             (symbolp (car which))))
+    (list which))
+   ;; session name
+   ((or (stringp which)
+        (symbolp which)
+        (gethash (cons system which) sesman-sessions-hashmap)))
    (t (error "Invalid which argument (%s)" which))))
 
 (defun sesman--cap-system-name (system)
