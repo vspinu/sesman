@@ -163,37 +163,31 @@ return nil. If LAX is non-nil, search nearby and return the closest value."
     (when (eobp)
       (goto-char pos))))
 
-;;;###autoload
 (defun sesman-browser-forward ()
   "Go to next button."
   (interactive)
   (sesman-browser--prev :sesman-stop))
 
-;;;###autoload
 (defun sesman-browser-backward ()
   "Go to previous button."
   (interactive)
   (sesman-browser--next :sesman-stop))
 
-;;;###autoload
 (defun sesman-browser-vertical-next ()
   "Go to next button section or row."
   (interactive)
   (sesman-browser--prev :sesman-vertical-stop))
 
-;;;###autoload
 (defun sesman-browser-vertical-prev ()
   "Go to previous button section or row."
   (interactive)
   (sesman-browser--next :sesman-vertical-stop))
 
-;;;###autoload
 (defun sesman-browser-session-next ()
   "Go to next session."
   (interactive)
   (sesman-browser--prev :sesman-session-stop))
 
-;;;###autoload
 (defun sesman-browser-session-prev ()
   "Go to previous session."
   (interactive)
@@ -202,7 +196,6 @@ return nil. If LAX is non-nil, search nearby and return the closest value."
 
 ;;; Display
 
-;;;###autoload
 (defun sesman-goto (&optional no-switch)
   "Go to most relevant buffer for session at point.
 If NO-SWITCH is non-nil, only display the buffer."
@@ -226,7 +219,6 @@ If NO-SWITCH is non-nil, only display the buffer."
                 (pop-to-buffer most-recent-buf)))
           (user-error "Cannot jump to session %s; it doesn't contain any buffers" (car session)))))))
 
-;;;###autoload
 (defun sesman-show ()
   "Show the most relevant buffer for the session at point."
   (interactive)
@@ -248,40 +240,34 @@ If NO-SWITCH is non-nil, only display the buffer."
 
 ;;; Sesman UI
 
-;;;###autoload
 (defun sesman-browser-quit-session ()
   "Quite session at point."
   (interactive)
   (sesman-quit (sesman-browser-get 'session)))
 
-;;;###autoload
 (defun sesman-browser-restart-session ()
   "Restart session at point."
   (interactive)
   (sesman-restart (sesman-browser-get 'session)))
 
-;;;###autoload
 (defun sesman-browser-link-with-buffer ()
   "Ask for buffer to link session at point to."
   (interactive)
   (let ((session (sesman-browser-get 'session)))
     (sesman-link-with-buffer 'ask session)))
 
-;;;###autoload
 (defun sesman-browser-link-with-directory ()
   "Ask for directory to link session at point to."
   (interactive)
   (let ((session (sesman-browser-get 'session)))
     (sesman-link-with-directory 'ask session)))
 
-;;;###autoload
 (defun sesman-browser-link-with-project ()
   "Ask for project to link session at point to."
   (interactive)
   (let ((session (sesman-browser-get 'session)))
     (sesman-link-with-project 'ask session)))
 
-;;;###autoload
 (defun sesman-browser-unlink ()
   "Unlink the link at point or ask for link to unlink."
   (interactive)
