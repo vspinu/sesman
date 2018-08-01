@@ -156,8 +156,8 @@ Can be either a symbol, or a function returning a symbol.")
                                               (sesman-context cxt-type system)))
                             (sesman--all-system-sessions system 'sort)
                             'ask-new))))
-          (sesman--link-session system session cxt-type cxt-val)
-          (run-hooks 'sesman-post-command-hook))
+          (prog1 (sesman--link-session system session cxt-type cxt-val)
+            (run-hooks 'sesman-post-command-hook)))
       (error (format "%s association not allowed for this system (%s)"
                      (capitalize cxt-name)
                      system)))))
@@ -308,13 +308,13 @@ If SORT is non-nil, sort in relevance order."
   (interactive)
   (let ((system (sesman--system)))
     (message "Starting new %s session ..." system)
-    (sesman-start-session system)
-    (run-hooks 'sesman-post-command-hook)))
+    (prog1 (sesman-start-session system)
+      (run-hooks 'sesman-post-command-hook))))
 
 ;;;###autoload
 (defun sesman-restart (&optional which)
   "Restart sesman session.
- When WHICH is nil, restart the current session; when a single universal
+When WHICH is nil, restart the current session; when a single universal
 argument or 'linked, restart all linked sessions; when a double universal
 argument, t or 'all, restart all sessions. For programmatic use, WHICH can also
 be a session or a name of the session, in which case that session is restarted."
@@ -615,15 +615,16 @@ CXT-TYPES is as in `sesman-linked-sessions'."
       (user-error "No linked %s sessions" system)))
 
 (defvar sesman--cxt-abbrevs '(buffer "buf" project "proj" directory "dir"))
-(defun sesman-grouped-links (system session &optional sort-current-first as-string)
+(defun sesman-grouped-links (system session &optional current-first as-string)
   "Retrieve all links for SYSTEM's SESSION from the global `sesman-links-alist'.
 Return an alist of the form
    ((buffer buffers..)
     (directory directories...)
     (project projects...)).
-When `sort-current-first' is non-nil, a cons of two lists as above is returned
-with car containing links relevant in current context and cdr all other links.
-If AS-STRING is non-nil, return an equivalent string representation."
+
+When `CURRENT-FIRST' is non-nil, a cons of two lists as above is returned with
+car containing links relevant in current context and cdr all other links. If
+AS-STRING is non-nil, return an equivalent string representation."
   (let* ((system (or system (sesman--system)))
          (session (or session (sesman-current-session system)))
          (ses-name (car session))
@@ -633,12 +634,12 @@ If AS-STRING is non-nil, return an equivalent string representation."
                   (reverse)))
          (out (mapcar (lambda (x) (list x))
                       (sesman-context-types system)))
-         (out-rel (when sort-current-first
+         (out-rel (when current-first
                     (copy-alist out))))
     (mapc (lambda (link)
             (let* ((type (sesman--lnk-context-type link))
                    (val (sesman--lnk-value link))
-                   (entry (if (and sort-current-first
+                   (entry (if (and current-first
                                    (sesman-relevant-link-p link))
                               (assoc type out-rel)
                             (assoc type out))))
@@ -662,7 +663,7 @@ If AS-STRING is non-nil, return an equivalent string representation."
                         (when out " | ")
                         (mapconcat fmt-fn out ", "))
               (mapconcat fmt-fn out ", ")))
-        (if sort-current-first
+        (if current-first
             (cons out-rel out)
           out)))))
 

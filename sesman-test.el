@@ -100,6 +100,7 @@
 
 (ert-deftest sesman-quit-test ()
   (with-empty-sesman-vars
+
    ;; alphabetic relevance
    (let ((sesman-system 'A))
      (sesman-start)
@@ -110,6 +111,7 @@
        (should-not (string=
                     (car ses)
                     (car (sesman-current-session 'A))))))
+
    ;; recency relevance
    (let ((sesman-system 'B))
      (sesman-start)
