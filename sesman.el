@@ -231,18 +231,12 @@ If SORT is non-nil, sort in relevance order."
     (if (and (listp info)
              (keywordp (car info)))
         (let ((ses-name (car session))
-              (indent (or indent 0))
               (sep (or sep " "))
-              (map (plist-get info :map))
               (strings (or (plist-get info :strings)
                            (mapcar (lambda (x) (format "%s" x))
                                    (plist-get info :objects)))))
           (mapconcat (lambda (str)
-                       (let ((str (replace-regexp-in-string ses-name "%%s" str nil t)))
-                         (propertize str
-                                     'mouse-face 'highlight
-                                     'help-echo "mouse-2: visit this file in other window"
-                                     'keymap map)))
+                       (replace-regexp-in-string ses-name "%%s" str nil t))
                      strings sep))
       (format "%s" info))))
 
