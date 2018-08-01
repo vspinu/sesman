@@ -386,8 +386,9 @@ ask for buffer."
                      (equal buffer '(4)))
                  (let ((this-system (sesman--system)))
                    (read-buffer "Link buffer: " (current-buffer) t
-                                (lambda (b)
-                                  (equal this-system (sesman--system-in-buffer b)))))
+                                (lambda (buf-cons)
+                                  (equal this-system
+                                         (sesman--system-in-buffer (cdr buf-cons))))))
                (or buffer (current-buffer)))))
     (sesman--link-session-interactively 'buffer buf session)))
 
