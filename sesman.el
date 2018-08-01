@@ -635,18 +635,19 @@ If AS-STRING is non-nil, return an equivalent string representation."
                               (assoc type out-rel)
                             (assoc type out))))
               (when entry
-                (setcdr entry (cons val (cdr entry))))))
+                (setcdr entry (cons link (cdr entry))))))
           links)
     (let ((out (delq nil (mapcar (lambda (el) (and (cdr el) el)) out)))
           (out-rel (delq nil (mapcar (lambda (el) (and (cdr el) el)) out-rel))))
       (if as-string
-          (let ((fmt-fn (lambda (link-vals)
-                          (let ((type (car link-vals)))
-                            (mapconcat (lambda (v)
-                                         (format "%s(%s)"
-                                                 (or (plist-get sesman--cxt-abbrevs type) type)
-                                                 (sesman--abbrev-path-maybe v)))
-                                       (cdr link-vals)
+          (let ((fmt-fn (lambda (typed-links)
+                          (let* ((type (car typed-links))
+                                 (short-type (or (plist-get sesman--cxt-abbrevs type) type)))
+                            (mapconcat (lambda (lnk)
+                                         (format "%s(%s)" short-type
+                                                 (sesman--abbrev-path-maybe
+                                                  (sesman--lnk-value lnk))))
+                                       (cdr typed-links)
                                        ", ")))))
             (if out-rel
                 (concat (mapconcat fmt-fn out-rel ", ")
