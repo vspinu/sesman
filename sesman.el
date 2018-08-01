@@ -312,20 +312,33 @@ If SORT is non-nil, sort in relevance order."
     (run-hooks 'sesman-post-command-hook)))
 
 ;;;###autoload
-(defun sesman-restart ()
-  "Restart sesman session."
-  (interactive)
+(defun sesman-restart (&optional which)
+  "Restart sesman session.
+ When WHICH is nil, restart the current session; when a single universal
+argument or 'linked, restart all linked sessions; when a double universal
+argument, t or 'all, restart all sessions. For programmatic use, WHICH can also
+be a session or a name of the session, in which case that session is restarted."
+  (interactive "P")
   (let* ((system (sesman--system))
-         (old-session (sesman-ensure-session system)))
-    (message "Restarting %s '%s' session" system (car old-session))
-    (sesman-restart-session system old-session)))
+         (sessions (sesman--on-C-u-u-sessions system which)))
+    (if (null sessions)
+        (message "No %s sessions found" system)
+      (with-temp-message (format "Restarting %s %s %s"  system
+                                 (if (= 1 (length sessions)) "session" "sessions")
+                                 (mapcar #'car sessions))
+        (mapc (lambda (s)
+                (sesman-restart-session system s))
+              sessions))
+      ;; restarting is not guaranteed to finish here, but what can we do?
+      (run-hooks 'sesman-post-command-hook))))
 
 ;;;###autoload
 (defun sesman-quit (&optional which)
   "Terminate a Sesman session.
 When WHICH is nil, kill only the current session; when a single universal
-argument or 'linked, kill all linked session; when a double universal argument,
-t or 'all, kill all sessions."
+argument or 'linked, kill all linked sessions; when a double universal argument,
+t or 'all, kill all sessions. For programmatic use, WHICH can also be a session
+or a name of the session, in which case that session is killed."
   (interactive "P")
   (let* ((system (sesman--system))
          (sessions (sesman--on-C-u-u-sessions system which)))
