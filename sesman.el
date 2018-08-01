@@ -492,7 +492,13 @@ By default, calls `sesman-quit-session' and then
       (setcar new-session old-name))))
 
 (cl-defgeneric sesman-session-info (_system session)
-  (cdr session))
+  "Return a plist with :objects key containing user \"visible\" objects.
+Optional :strings value is a list of string representations of objects. Optional
+:map key is a local keymap to place on every object in the session browser.
+Optional :buffers is a list of buffers which will be used for navigation from
+the session browser. If :buffers is missing, buffers from :objects are used
+instead."
+  (list :objects (cdr session)))
 
 (cl-defgeneric sesman-project (_system)
   "Retrieve project root for SYSTEM in directory DIR.
