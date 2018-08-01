@@ -85,6 +85,8 @@ and cxt-type must be symbols.")
 (defvar-local sesman-system nil
   "Name of the system managed by `sesman'.
 Can be either a symbol, or a function returning a symbol.")
+(put 'sesman-system 'permanent-local 't)
+
 
 
 ;; Internal Utilities
