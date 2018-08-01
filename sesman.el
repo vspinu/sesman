@@ -423,10 +423,11 @@ PROJECT defaults to current project. On universal argument, or if PROJECT is
   "Break any of the previously created links."
   (interactive)
   (let* ((system (sesman--system))
-         (links (or (sesman-current-links system)
+         (links (or (sesman-current-links system session)
                     (user-error "No %s links found" system))))
     (mapc #'sesman--unlink
-          (sesman--ask-for-link "Unlink: " links 'ask-all))))
+          (sesman--ask-for-link "Unlink: " links 'ask-all)))
+  (run-hooks 'sesman-post-command-hook))
 
 (defvar sesman-map
   (let (sesman-map)
