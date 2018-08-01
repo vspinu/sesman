@@ -646,7 +646,8 @@ If AS-STRING is non-nil, return an equivalent string representation."
                         (mapconcat fmt-fn out ", "))
               (mapconcat fmt-fn out ", ")))
         (if sort-current-first
-            (cons out-rel out))))))
+            (cons out-rel out)
+          out)))))
 
 (defun sesman-links (system &optional session-or-name cxt-types sort)
 "Retrieve all links for SYSTEM, SESSION-OR-NAME and CXT-TYPES.
