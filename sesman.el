@@ -156,7 +156,8 @@ Can be either a symbol, or a function returning a symbol.")
                                               (sesman-context cxt-type system)))
                             (sesman--all-system-sessions system 'sort)
                             'ask-new))))
-          (sesman--link-session system session cxt-type cxt-val))
+          (sesman--link-session system session cxt-type cxt-val)
+          (run-hooks 'sesman-post-command-hook))
       (error (format "%s association not allowed for this system (%s)"
                      (capitalize cxt-name)
                      system)))))
@@ -304,13 +305,17 @@ If SORT is non-nil, sort in relevance order."
 
 ;;; User Interface
 
+(defun sesman-post-command-hook nil
+  "Normal hook ran after every state-changing Sesman command.")
+
 ;;;###autoload
 (defun sesman-start ()
-  "Start sesman session."
+  "Start a Sesman session."
   (interactive)
   (let ((system (sesman--system)))
     (message "Starting new %s session ..." system)
-    (sesman-start-session system)))
+    (sesman-start-session system)
+    (run-hooks 'sesman-post-command-hook)))
 
 ;;;###autoload
 (defun sesman-restart ()
@@ -323,7 +328,7 @@ If SORT is non-nil, sort in relevance order."
 
 ;;;###autoload
 (defun sesman-quit (&optional which)
-  "Terminate sesman session.
+  "Terminate a Sesman session.
 When WHICH is nil, kill only the current session; when a single universal
 argument or 'linked, kill all linked session; when a double universal argument,
 t or 'all, kill all sessions."
@@ -331,17 +336,17 @@ t or 'all, kill all sessions."
   (let* ((system (sesman--system))
          (sessions (sesman--on-C-u-u-sessions system which)))
     (if (null sessions)
-        (message "No more %s sessions" system)
-      (mapc (lambda (s)
-              (sesman-unregister system s)
-              (sesman-quit-session system s))
-            sessions)
-      (message
-       "Killed %s %s %s"  system
-       (if (= 1 (length sessions)) "session" "sessions")
-       (mapcar #'car sessions)))))
+        (message "No %s sessions found" system)
+      (with-temp-message (format "Killing %s %s %s"  system
+                                 (if (= 1 (length sessions)) "session" "sessions")
+                                 (mapcar #'car sessions))
+        (mapc (lambda (s)
+                (sesman-unregister system s)
+                (sesman-quit-session system s))
+              sessions))
+      (run-hooks 'sesman-post-command-hook))))
 
-;; ;;;###autoload
+;;;###autoload
 (defun sesman-info (&optional all)
   "Display linked sessions info.
 When ALL is non-nil, show info for all sessions."
