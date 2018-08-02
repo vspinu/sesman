@@ -1,4 +1,4 @@
-;;; sesman-broser.el --- Interactive Browser for Sesman -*- lexical-binding: t -*-
+;;; sesman-browser.el --- Interactive Browser for Sesman -*- lexical-binding: t -*-
 ;;
 ;; Copyright (C) 2018, Vitalie Spinu
 ;; Author: Vitalie Spinu
@@ -325,7 +325,7 @@ See `sesman-browser-sort-type' for the default sorting type."
 
 (define-derived-mode sesman-browser-mode special-mode "SesmanBrowser"
   "Interactive view of Sesman sessions."
-  ;; ensure there is a sesman-system here 
+  ;; ensure there is a sesman-system here
   (sesman--system)
   (add-hook 'sesman-post-command-hook 'sesman-browser-revert nil t)
   (setq-local sesman-browser--sort-types (default-value 'sesman-browser--sort-types))
@@ -444,7 +444,6 @@ See `sesman-browser-sort-type' for the default sorting type."
                                       (get-text-property (point) :sesman-fragment-end)))
             (overlay-put sesman-browser--section-overlay 'line-prefix dummy-string)))))))
 
-(provide 'sesman-broser)
+(provide 'sesman-browser)
 
-;;; sesman-broser.el ends here
-
+;;; sesman-browser.el ends here
