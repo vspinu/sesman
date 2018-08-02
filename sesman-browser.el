@@ -299,6 +299,17 @@ If NO-SWITCH is non-nil, only display the buffer."
               (sesman-browser-revert))))
         (buffer-list)))
 
+(defun sesman-browser--goto-stop (stop-value)
+  (let ((search t))
+    (goto-char (point-min))
+    (while search
+      (goto-char (next-single-char-property-change (point) :sesman-stop))
+      (if (eobp)
+          (progn (setq search nil)
+                 (goto-char (next-single-char-property-change (point-min) :sesman-stop)))
+        (when (equal (get-text-property (point) :sesman-stop) stop-value)
+          (setq search nil))))))
+
 (defun sesman-browser-toggle-sort ()
   "Toggle sorting of sessions.
 See `sesman-browser-sort-type' for the default sorting type."
@@ -311,15 +322,8 @@ See `sesman-browser-sort-type' for the default sorting type."
   (setq sesman-browser-sort-type (pop sesman-browser--sort-types))
   (let ((stop (sesman-browser-get :sesman-stop nil 'lax)))
     (sesman-browser)
-    (goto-char (point-min))
-    (let ((search t))
-      (while search
-        (goto-char (next-single-char-property-change (point) :sesman-stop))
-        (if (eobp)
-            (progn (setq search nil)
-                   (goto-char (next-single-char-property-change (point-min) :sesman-stop)))
-          (when (equal (get-text-property (point) :sesman-stop) stop)
-            (setq search nil))))))
+    (sesman-browser--goto-stop stop)
+    (sesman-browser--sensor-function))
   (message "Sorted by %s"
            (propertize (symbol-name sesman-browser-sort-type) 'face 'bold)))
 
@@ -327,7 +331,16 @@ See `sesman-browser-sort-type' for the default sorting type."
   "Interactive view of Sesman sessions."
   ;; ensure there is a sesman-system here
   (sesman--system)
+  (delete-all-overlays)
+  (setq-local sesman-browser--stop-overlay (make-overlay (point) (point)))
+  (overlay-put sesman-browser--stop-overlay 'face 'sesman-browser-highligh)
+  (setq-local sesman-browser--section-overlay (make-overlay (point) (point)))
+  (when window-system
+    (let* ((fringe-spec '(left-fringe sesman-left-bar sesman-browser-highligh))
+           (dummy-string (propertize "|" 'display fringe-spec)))
+      (overlay-put sesman-browser--section-overlay 'line-prefix dummy-string)))
   (add-hook 'sesman-post-command-hook 'sesman-browser-revert nil t)
+  (setq-local display-buffer-base-action '(nil . ((inhibit-same-window . t))))
   (setq-local sesman-browser--sort-types (default-value 'sesman-browser--sort-types))
   (setq-local revert-buffer-function #'sesman-browser-revert))
 
@@ -411,9 +424,11 @@ See `sesman-browser-sort-type' for the default sorting type."
   "Display an interactive session browser."
   (interactive)
   (let* ((system (sesman--system))
+         (pop-to (called-interactively-p 'any))
          (sessions (sesman-sessions system))
-         (buff (get-buffer-create (format "*sesman %s browser*" system)))
-         (pop-to (called-interactively-p 'any)))
+         (cur-session (when pop-to
+                        (sesman-current-session 'CIDER)))
+         (buff (get-buffer-create (format "*sesman %s browser*" system))))
     (with-current-buffer buff
       (setq-local sesman-system system)
       (sesman-browser-mode)
@@ -431,18 +446,9 @@ See `sesman-browser-sort-type' for the default sorting type."
           (setq i (1+ i))
           (sesman-browser--insert-session system ses i))
         (when pop-to
-          (pop-to-buffer buff))
-        (let ((dummy-string  (ess-tracebug--propertize "|" 'sesman-left-bar
-                                                       'font-lock-keyword-face)))
-          (goto-char (next-single-property-change (point-min) :sesman-stop))
-          (setq-local sesman-browser--stop-overlay
-                      (make-overlay (point) (next-single-property-change (point) :sesman-stop)))
-          (overlay-put sesman-browser--stop-overlay 'face 'sesman-browser-highligh)
-          (when window-system
-            (setq-local sesman-browser--section-overlay
-                        (make-overlay (get-text-property (point) :sesman-fragment-beg)
-                                      (get-text-property (point) :sesman-fragment-end)))
-            (overlay-put sesman-browser--section-overlay 'line-prefix dummy-string)))))))
+          (pop-to-buffer buff)
+          (sesman-browser--goto-stop (car cur-session)))
+        (sesman-browser--sensor-function)))))
 
 (provide 'sesman-browser)
 
