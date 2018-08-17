@@ -1,5 +1,4 @@
 export EMACS ?= emacs
-EMACSFLAGS = -L .
 VERSION = $(git describe --tags --abbrev=0 | sed 's/^v//')
 
 ELS = $(wildcard *.el)
