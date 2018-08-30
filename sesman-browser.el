@@ -40,12 +40,12 @@
   :group 'sesman
   :link '(url-link :tag "GitHub" "https://github.com/vspinu/sesman"))
 
-(defface sesman-browser-highligh
+(defface sesman-browser-highligh-face
   '((default (:inherit highlight :weight bold)))
   "Face used to highlight currently selected button."
   :group 'sesman-browser)
 
-(defface sesman-browser-button
+(defface sesman-browser-button-face
   '((default (:inherit button :slant italic)))
   "Face used to highlight currently selected object."
   :group 'sesman-browser)
@@ -339,10 +339,10 @@ on a session object."
   (sesman--system)
   (delete-all-overlays)
   (setq-local sesman-browser--stop-overlay (make-overlay (point) (point)))
-  (overlay-put sesman-browser--stop-overlay 'face 'sesman-browser-highligh)
+  (overlay-put sesman-browser--stop-overlay 'face 'sesman-browser-highligh-face)
   (setq-local sesman-browser--section-overlay (make-overlay (point) (point)))
   (when window-system
-    (let* ((fringe-spec '(left-fringe sesman-left-bar sesman-browser-highligh))
+    (let* ((fringe-spec '(left-fringe sesman-left-bar sesman-browser-highligh-face))
            (dummy-string (propertize "|" 'display fringe-spec)))
       (overlay-put sesman-browser--section-overlay 'line-prefix dummy-string)))
   (add-hook 'sesman-post-command-hook 'sesman-browser-revert nil t)
@@ -378,7 +378,7 @@ on a session object."
               (insert "\n" (format head-template " "))
               (setq vert-stop nil))
             (let ((val (sesman--abbrev-path-maybe (sesman--lnk-value link))))
-              (insert (propertize (sesman--format-context type val 'sesman-browser-button)
+              (insert (propertize (sesman--format-context type val 'sesman-browser-button-face)
                                   :sesman-stop (car link)
                                   :sesman-vertical-stop (unless vert-stop (setq vert-stop t))
                                   :sesman-link link
@@ -408,7 +408,7 @@ on a session object."
                               :sesman-vertical-stop (unless vert-stop (setq vert-stop t))
                               :sesman-object (car kv)
                               'cursor-sensor-functions (list #'sesman-browser--sensor-function)
-                              'face 'sesman-browser-button
+                              'face 'sesman-browser-button-face
                               'mouse-face 'highlight
                               'help-echo "mouse-2: visit in other window"
                               'keymap map)
@@ -458,5 +458,4 @@ See `sesman-browser-mode' for more details."
         (sesman-browser--sensor-function)))))
 
 (provide 'sesman-browser)
-
 ;;; sesman-browser.el ends here
