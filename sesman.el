@@ -60,7 +60,7 @@
   :group 'sesman)
 
 (defface sesman-buffer-face
-  '((default (:inherit font-lock-keyword-face)))
+  '((default (:inherit font-lock-preprocessor-face)))
   "Face used to mark buffers."
   :group 'sesman)
 
