@@ -683,7 +683,7 @@ AS-STRING is non-nil, return an equivalent string representation."
                                        ", ")))))
             (if out-rel
                 (concat (mapconcat fmt-fn out-rel ", ")
-                        (when out " ")
+                        (when out " | ")
                         (mapconcat fmt-fn out ", "))
               (mapconcat fmt-fn out ", ")))
         (if current-first
