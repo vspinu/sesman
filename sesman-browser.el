@@ -40,13 +40,6 @@
   :group 'sesman
   :link '(url-link :tag "GitHub" "https://github.com/vspinu/sesman"))
 
-(defvar-local sesman-browser--sort-types '(name relevance))
-(defcustom sesman-browser-sort-type 'name
-  "Default sorting type in sesman browser buffers.
-Currently can be either 'name  or 'relevance."
-  :type '(choice (const name) (const relevance))
-  :group 'sesman-browser)
-
 (defface sesman-browser-highligh
   '((default (:inherit highlight :weight bold)))
   "Face used to highlight currently selected button."
@@ -55,6 +48,33 @@ Currently can be either 'name  or 'relevance."
 (defface sesman-browser-button
   '((default (:inherit button :slant italic)))
   "Face used to highlight currently selected object."
+  :group 'sesman-browser)
+
+(defface sesman-browser-project-face
+  '((default (:inherit font-lock-comment-face)))
+  "Face used to mark projects."
+  :group 'sesman-browser)
+
+(defface sesman-browser-directory-face
+  '((default (:inherit font-lock-constant-face)))
+  "Face used to mark directories."
+  :group 'sesman-browser)
+
+(defface sesman-browser-buffer-face
+  '((default (:inherit font-lock-keyword-face)))
+  "Face used to mark buffers."
+  :group 'sesman-browser)
+
+(defface sesman-browser-project-face
+  '((default (:inherit font-lock-comment-face)))
+  "Face used to mark projects."
+  :group 'sesman-browser)
+
+(defvar-local sesman-browser--sort-types '(name relevance))
+(defcustom sesman-browser-sort-type 'name
+  "Default sorting type in sesman browser buffers.
+Currently can be either 'name  or 'relevance."
+  :type '(choice (const name) (const relevance))
   :group 'sesman-browser)
 
 (defvar sesman-browser-map
@@ -332,7 +352,9 @@ See `sesman-browser-sort-type' for the default sorting type."
            (propertize (symbol-name sesman-browser-sort-type) 'face 'bold)))
 
 (define-derived-mode sesman-browser-mode special-mode "SesmanBrowser"
-  "Interactive view of Sesman sessions."
+  "Interactive view of Sesman sessions.
+When applicable, system specific commands are locally bound to j when point is
+on a session object."
   ;; ensure there is a sesman-system here
   (sesman--system)
   (delete-all-overlays)
@@ -371,20 +393,27 @@ See `sesman-browser-sort-type' for the default sorting type."
           (vert-stop))
       (dolist (grp link-groups)
         (let* ((type (car grp))
-               (short-type (or (plist-get sesman--cxt-abbrevs type) type)))
+               (face (intern (format "sesman-browser-%s-face" type)))
+               (short-type (propertize (or (plist-get sesman--cxt-abbrevs type)
+                                           (symbol-value type))
+                                       'face (list (if (facep face)
+                                                       face
+                                                     'font-lock-function-name-face)
+                                                   'sesman-browser-button))))
           (dolist (link (cdr grp))
             (when (> (current-column) fill-column)
               (insert "\n" (format head-template " "))
               (setq vert-stop nil))
-            (insert (propertize (format "%s(%s)" short-type
-                                        (sesman--abbrev-path-maybe
-                                         (sesman--lnk-value link)))
-                                :sesman-stop (car link)
-                                :sesman-vertical-stop (unless vert-stop (setq vert-stop t))
-                                :sesman-link link
-                                'cursor-sensor-functions (list #'sesman-browser--sensor-function)
-                                'mouse-face 'highlight
-                                'face 'sesman-browser-button))
+            (let ((link-spec (propertize (format "(%s)"
+                                                 (sesman--abbrev-path-maybe
+                                                  (sesman--lnk-value link)))
+                                         'face 'sesman-browser-button)))
+              (insert (propertize (concat short-type link-spec)
+                                  :sesman-stop (car link)
+                                  :sesman-vertical-stop (unless vert-stop (setq vert-stop t))
+                                  :sesman-link link
+                                  'cursor-sensor-functions (list #'sesman-browser--sensor-function)
+                                  'mouse-face 'highlight)))
             (insert "  ")))))
     (insert "\n")
 
@@ -425,7 +454,8 @@ See `sesman-browser-sort-type' for the default sorting type."
 
 ;;;###autoload
 (defun sesman-browser ()
-  "Display an interactive session browser."
+  "Display an interactive session browser.
+See `sesman-browser-mode' for more details."
   (interactive)
   (let* ((system (sesman--system))
          (pop-to (called-interactively-p 'any))
