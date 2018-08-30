@@ -409,11 +409,12 @@ PROJECT defaults to current project. On universal argument, or if PROJECT is
 'ask, ask for the project. SESSION defaults to the current session."
   (interactive "P")
   (let* ((system (sesman--system))
-         (project (if (or (eq project 'ask)
-                          (equal project '(4)))
-                      ;; FIXME: should be a completion over all known projects for this system
-                      (read-directory-name "Project: " (sesman-project system))
-                    (or project (sesman-project system)))))
+         (project (expand-file-name
+                   (if (or (eq project 'ask)
+                           (equal project '(4)))
+                       ;; FIXME: should be a completion over all known projects for this system
+                       (read-directory-name "Project: " (sesman-project system))
+                     (or project (sesman-project system))))))
     (sesman--link-session-interactively session 'project project)))
 
  ;;;###autoload
@@ -877,13 +878,15 @@ buffers."
   default-directory)
 (cl-defmethod sesman-context ((_cxt-type (eql project)) system)
   "Return current project."
-  (or
-   (sesman-project (or system (sesman--system)))
-   ;; Normally we would use (project-roots (project-current)) but currently
-   ;; project-roots fails on nil and doesn't work on custom `('foo .
-   ;; "path/to/project"). So, use vc as a fallback and don't use project.el at
-   ;; all for now.
-   (vc-root-dir)))
+  (let ((proj (or
+               (sesman-project (or system (sesman--system)))
+               ;; Normally we would use (project-roots (project-current)) but currently
+               ;; project-roots fails on nil and doesn't work on custom `('foo .
+               ;; "path/to/project"). So, use vc as a fallback and don't use project.el at
+               ;; all for now.
+               (vc-root-dir))))
+    (when proj
+      (expand-file-name proj))))
 
 (cl-defgeneric sesman-relevant-context-p (_cxt-type cxt)
   "Non-nil if context CXT is relevant to current context of type CXT-TYPE.")
