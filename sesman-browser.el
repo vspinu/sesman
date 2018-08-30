@@ -50,26 +50,6 @@
   "Face used to highlight currently selected object."
   :group 'sesman-browser)
 
-(defface sesman-browser-project-face
-  '((default (:inherit font-lock-comment-face)))
-  "Face used to mark projects."
-  :group 'sesman-browser)
-
-(defface sesman-browser-directory-face
-  '((default (:inherit font-lock-constant-face)))
-  "Face used to mark directories."
-  :group 'sesman-browser)
-
-(defface sesman-browser-buffer-face
-  '((default (:inherit font-lock-keyword-face)))
-  "Face used to mark buffers."
-  :group 'sesman-browser)
-
-(defface sesman-browser-project-face
-  '((default (:inherit font-lock-comment-face)))
-  "Face used to mark projects."
-  :group 'sesman-browser)
-
 (defvar-local sesman-browser--sort-types '(name relevance))
 (defcustom sesman-browser-sort-type 'name
   "Default sorting type in sesman browser buffers.
@@ -392,23 +372,13 @@ on a session object."
     (let ((link-groups (sesman-grouped-links system ses))
           (vert-stop))
       (dolist (grp link-groups)
-        (let* ((type (car grp))
-               (face (intern (format "sesman-browser-%s-face" type)))
-               (short-type (propertize (or (plist-get sesman--cxt-abbrevs type)
-                                           (symbol-value type))
-                                       'face (list (if (facep face)
-                                                       face
-                                                     'font-lock-function-name-face)
-                                                   'sesman-browser-button))))
+        (let* ((type (car grp)))
           (dolist (link (cdr grp))
             (when (> (current-column) fill-column)
               (insert "\n" (format head-template " "))
               (setq vert-stop nil))
-            (let ((link-spec (propertize (format "(%s)"
-                                                 (sesman--abbrev-path-maybe
-                                                  (sesman--lnk-value link)))
-                                         'face 'sesman-browser-button)))
-              (insert (propertize (concat short-type link-spec)
+            (let ((val (sesman--abbrev-path-maybe (sesman--lnk-value link))))
+              (insert (propertize (sesman--format-context type val 'sesman-browser-button)
                                   :sesman-stop (car link)
                                   :sesman-vertical-stop (unless vert-stop (setq vert-stop t))
                                   :sesman-link link
@@ -475,7 +445,10 @@ See `sesman-browser-mode' for more details."
                         (_ (error "Invalid `sesman-browser-sort-type'"))))
             (i 0))
         (erase-buffer)
-        (insert (format "\n %s Sessions:\n\n" system))
+        (insert "\n ")
+        (insert (propertize (format "%s Sessions:" system)
+                            'face '(bold font-lock-keyword-face)))
+        (insert "\n\n")
         (dolist (ses sessions)
           (setq i (1+ i))
           (sesman-browser--insert-session system ses i))

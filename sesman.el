@@ -49,6 +49,21 @@
   :group 'tools
   :link '(url-link :tag "GitHub" "https://github.com/vspinu/sesman"))
 
+(defface sesman-project-face
+  '((default (:inherit font-lock-doc-face)))
+  "Face used to mark projects."
+  :group 'sesman)
+
+(defface sesman-directory-face
+  '((default (:inherit font-lock-type-face)))
+  "Face used to mark directories."
+  :group 'sesman)
+
+(defface sesman-buffer-face
+  '((default (:inherit font-lock-keyword-face)))
+  "Face used to mark buffers."
+  :group 'sesman)
+
 ;; (defcustom sesman-disambiguate-by-relevance t
 ;;   "If t choose most relevant session in ambiguous situations, otherwise ask.
 ;; Ambiguity arises when multiple sessions are associated with current context.  By
@@ -228,7 +243,7 @@ If SORT is non-nil, sort in relevance order."
           (or prefix "")
           (propertize (car ses) 'face 'bold)
           (propertize (sesman--format-session-objects system ses ", ") 'face 'italic)
-          (propertize (sesman-grouped-links system ses t t) 'face 'italic)))
+          (sesman-grouped-links system ses t t)))
 
 (defun sesman--format-link (link)
   (let* ((system (sesman--lnk-system-name link))
@@ -611,9 +626,22 @@ CXT-TYPES is as in `sesman-linked-sessions'."
       (user-error "No linked %s sessions" system)))
 
 (defvar sesman--cxt-abbrevs '(buffer "buf" project "proj" directory "dir"))
+(defun sesman--format-context (cxt-type cxt-val extra-face)
+  (let* ((face (intern (format "sesman-%s-face" cxt-type)))
+         (short-type (propertize (or (plist-get sesman--cxt-abbrevs cxt-type)
+                                     (symbol-value cxt-type))
+                                 'face (list (if (facep face)
+                                                 face
+                                               'font-lock-function-name-face)
+                                             extra-face))))
+    (concat short-type
+            (propertize (format "(%s)" cxt-val)
+                        'face extra-face))))
+
 (defun sesman-grouped-links (system session &optional current-first as-string)
   "Retrieve all links for SYSTEM's SESSION from the global `sesman-links-alist'.
 Return an alist of the form
+
    ((buffer buffers..)
     (directory directories...)
     (project projects...)).
@@ -645,17 +673,16 @@ AS-STRING is non-nil, return an equivalent string representation."
           (out-rel (delq nil (mapcar (lambda (el) (and (cdr el) el)) out-rel))))
       (if as-string
           (let ((fmt-fn (lambda (typed-links)
-                          (let* ((type (car typed-links))
-                                 (short-type (or (plist-get sesman--cxt-abbrevs type) type)))
+                          (let* ((type (car typed-links)))
                             (mapconcat (lambda (lnk)
-                                         (format "%s(%s)" short-type
-                                                 (sesman--abbrev-path-maybe
-                                                  (sesman--lnk-value lnk))))
+                                         (let ((val (sesman--abbrev-path-maybe
+                                                     (sesman--lnk-value lnk))))
+                                           (sesman--format-context type val 'italic)))
                                        (cdr typed-links)
                                        ", ")))))
             (if out-rel
                 (concat (mapconcat fmt-fn out-rel ", ")
-                        (when out " | ")
+                        (when out " ")
                         (mapconcat fmt-fn out ", "))
               (mapconcat fmt-fn out ", ")))
         (if current-first
