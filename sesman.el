@@ -438,6 +438,7 @@ buffer."
   (run-hooks 'sesman-post-command-hook))
 
 (declare-function sesman-browser "sesman-browser")
+;;;###autoload (autoload 'sesman-map "sesman" "Session management prefix keymap." t 'keymap)
 (defvar sesman-map
   (let (sesman-map)
     (define-prefix-command 'sesman-map)
@@ -810,6 +811,7 @@ session (list SESSION-NAME OBJECT)."
           (sesman-register system (list session-name object))
         (error "%s session '%s' does not exist"
                (sesman--cap-system-name system) session-name)))))
+
 
 (defun sesman-remove-object (system session-name object &optional auto-unregister no-error)
   "Remove (destructively) OBJECT from session SESSION-NAME of SYSTEM.
