@@ -65,9 +65,9 @@
   :group 'sesman)
 
 (defcustom sesman-use-friendly-sessions t
-  "If non-nil consider friendly sessions when choosing for the current session.
+  "If non-nil consider friendly sessions when searching for the current sessions.
 The definition of friendly sessions is system dependent but usually means
-sessions running in dependency projects."
+sessions running in dependent projects."
   :group 'sesman
   :type 'boolean
   :package-version '(sesman . "0.3.2"))
@@ -657,9 +657,11 @@ return a list of sessions, otherwise a single session."
         (if ask-all (list ses) ses))))))
 
 (defun sesman-current-session (system &optional cxt-types)
-  "Get the most relevant linked session for SYSTEM.
-CXT-TYPES is as in `sesman-linked-sessions'."
-  (car (sesman-current-sessions system cxt-types)))
+  "Get the most relevant current session for the SYSTEM.
+CXT-TYPES is a list of context types to consider. See `sesman-current-sessions'
+for further details."
+  (or (car (sesman-linked-sessions system cxt-types))
+      (car (sesman-friendly-sessions system 'sort))))
 
 (defun sesman-ensure-session (system &optional cxt-types)
   "Get the most relevant linked session for SYSTEM or throw if none exists.
