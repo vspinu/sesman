@@ -370,15 +370,14 @@ sessions."
          (i 1)
          (sessions (if all
                        (sesman-sessions system t)
-                     (sesman-current-sessions system))))
+                     (sesman-current-sessions system)))
+         (empty-prefix (if (> (length sessions) 1) "  " "")))
     (if sessions
         (message (mapconcat (lambda (ses)
-                              (let ((prefix (if (> (length sessions) 1)
-                                                (if (sesman-relevant-session-p system ses)
-                                                    (prog1 (format "%d " i)
-                                                      (setq i (1+ i)))
-                                                  "  ")
-                                              "")))
+                              (let ((prefix (if (sesman-relevant-session-p system ses)
+                                                (prog1 (format "%d " i)
+                                                  (setq i (1+ i)))
+                                              empty-prefix)))
                                 (sesman--format-session system ses prefix)))
                             sessions
                             "\n"))
