@@ -64,6 +64,14 @@
   "Face used to mark buffers."
   :group 'sesman)
 
+(defcustom sesman-use-friendly-sessions t
+  "If non-nil consider friendly sessions when choosing for the current session.
+The definition of friendly sessions is system dependent but usually means
+sessions running in dependency projects."
+  :group 'sesman
+  :type 'boolean
+  :package-version '(sesman . "0.3.2"))
+
 ;; (defcustom sesman-disambiguate-by-relevance t
 ;;   "If t choose most relevant session in ambiguous situations, otherwise ask.
 ;; Ambiguity arises when multiple sessions are associated with current context.  By
@@ -353,14 +361,16 @@ or a name of the session, in which case that session is killed."
 
 ;;;###autoload
 (defun sesman-info (&optional all)
-  "Display linked sessions info.
-When ALL is non-nil, show info for all sessions."
+  "Display info for all current sessions (`sesman-current-sessions').
+In the resulting minibuffer display linked sessions are numbered and the
+other (friendly) sessions are not. When ALL is non-nil, show info for all
+sessions."
   (interactive "P")
   (let* ((system (sesman--system))
          (i 1)
          (sessions (if all
                        (sesman-sessions system t)
-                     (sesman-linked-sessions system))))
+                     (sesman-current-sessions system))))
     (if sessions
         (message (mapconcat (lambda (ses)
                               (let ((prefix (if (> (length sessions) 1)
@@ -372,7 +382,9 @@ When ALL is non-nil, show info for all sessions."
                                 (sesman--format-session system ses prefix)))
                             sessions
                             "\n"))
-      (message "No %s %ssessions" system (if all "" "linked ")))))
+      (message "No %s%s sessions"
+               (if all "" "current ")
+               system))))
 
 ;;;###autoload
 (defun sesman-link-with-buffer (&optional buffer session)
@@ -527,6 +539,13 @@ provide a more meaningful ordering. If your system objects are buffers you can
 use `sesman-more-recent-p' utility in this method."
   (not (string-greaterp (car session1) (car session2))))
 
+(cl-defgeneric sesman-friendly-session-p (_system _session)
+  "Return non-nil if SESSION is a friendly session in current context.
+The \"friendship\" is system dependent but usually means sessions running in
+dependency projects. Unless SYSTEM has defined a method for this generic, there
+are no friendly sessions."
+  nil)
+
 (cl-defgeneric sesman-context-types (_system)
   "Return a list of context types understood by SYSTEM.
 Contexts must be sorted from most specific to least specific."
@@ -548,7 +567,6 @@ If SORT is non-nil, sessions are sorted in the relevance order and
     (if sort
         (delete-dups
          (append (sesman-linked-sessions system)
-                 ;; (sesman-friendly-sessions system)
                  (sesman--all-system-sessions system t)))
       (sesman--all-system-sessions system))))
 
@@ -564,6 +582,29 @@ list returned from `sesman-context-types'."
      (mapcar (lambda (assoc)
                (gethash (car assoc) sesman-sessions-hashmap))
              (sesman-current-links system nil cxt-types)))))
+
+(defun sesman-friendly-sessions (system &optional sort)
+  "Return a list of \"friendly\" sessions for the current context.
+The definition of friendly sessions is SYSTEM dependent but usually means
+sessions running in dependency projects. When SORT is non-nil, also sort the
+sessions by relevance."
+  (let ((sessions (seq-filter (lambda (ses) (sesman-friendly-session-p system ses))
+                              (sesman--all-system-sessions system))))
+    (if sort
+        (sesman--sort-sessions system sessions)
+      sessions)))
+
+(defun sesman-current-sessions (system &optional cxt-types)
+  "Return a list of SYSTEM sessions active in the current context.
+If `sesman-use-friendly-sessions' current sessions consist of
+`sesman-linked-sessions' and `sesman-friendly-sessions', otherwise only of
+linked sessions. CXT-TYPES is a list of context types to consider. Defaults to
+the list returned from `sesman-context-types'."
+  (if sesman-use-friendly-sessions
+      (delete-dups
+       (append (sesman-linked-sessions system cxt-types)
+               (sesman-friendly-sessions system 'sort)))
+    (sesman-linked-sessions system cxt-types)))
 
 (defun sesman-has-sessions-p (system)
   "Return t if there is at least one session registered with SYSTEM."
@@ -619,12 +660,12 @@ return a list of sessions, otherwise a single session."
 (defun sesman-current-session (system &optional cxt-types)
   "Get the most relevant linked session for SYSTEM.
 CXT-TYPES is as in `sesman-linked-sessions'."
-  (car (sesman-linked-sessions system cxt-types)))
+  (car (sesman-current-sessions system cxt-types)))
 
 (defun sesman-ensure-session (system &optional cxt-types)
   "Get the most relevant linked session for SYSTEM or throw if none exists.
 CXT-TYPES is as in `sesman-linked-sessions'."
-  (or (car (sesman-linked-sessions system cxt-types))
+  (or (sesman-current-session system cxt-types)
       (user-error "No linked %s sessions" system)))
 
 (defvar sesman--cxt-abbrevs '(buffer "buf" project "proj" directory "dir"))
@@ -695,7 +736,8 @@ AS-STRING is non-nil, return an equivalent string representation."
   "Link SYSTEM's SESSION to context give by CXT-TYPE and CXT-VAL.
 If CXT-TYPE is nil, use the least specific type available in the current
 context. If CXT-TYPE is non-nil, and CXT-VAL is not given, retrieve it with
-`sesman-context'."
+`sesman-context'. See also `sesman-link-with-project',
+`sesman-link-with-directory' and `sesman-link-with-buffer'."
   (let* ((ses-name (or (car-safe session)
                        (error "SESSION must be a headed list")))
          (cxt-val (or cxt-val
