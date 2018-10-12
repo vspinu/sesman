@@ -121,7 +121,7 @@ Can be either a symbol, or a function returning a symbol.")
       (when ses
         (list ses))))
    ((or (equal which '(4)) (eq which 'linked))
-    (sesman-linked-sessions system))
+    (sesman--linked-sessions system))
    ((or (equal which '(16)) (eq which 'all) (eq which t))
     (sesman--all-system-sessions system 'sort))
    ;; session itself
@@ -191,6 +191,23 @@ Can be either a symbol, or a function returning a symbol.")
           (funcall sesman-system)
         sesman-system)
     (error "No `sesman-system' in buffer `%s'" (current-buffer))))
+
+(defun sesman--linked-sessions (system &optional sort cxt-types)
+  (let* ((system (or system (sesman--system)))
+         (cxt-types (or cxt-types (sesman-context-types system))))
+    ;; just in case some links are lingering due to user errors
+    (sesman--clear-links)
+    (delete-dups
+     (mapcar (lambda (assoc)
+               (gethash (car assoc) sesman-sessions-hashmap))
+             (sesman-current-links system nil cxt-types)))))
+
+(defun sesman--friendly-sessions (system &optional sort)
+  (let ((sessions (seq-filter (lambda (ses) (sesman-friendly-session-p system ses))
+                              (sesman--all-system-sessions system))))
+    (if sort
+        (sesman--sort-sessions system sessions)
+      sessions)))
 
 (defun sesman--all-system-sessions (&optional system sort)
   "Return a list of sessions registered with SYSTEM.
@@ -558,52 +575,38 @@ Contexts must be sorted from most specific to least specific."
   (let ((system (or system (sesman--system))))
     (gethash (cons system session-name) sesman-sessions-hashmap)))
 
-(defun sesman-sessions (system &optional sort)
-  "Return a list of all sessions registered with SYSTEM.
-If SORT is non-nil, sessions are sorted in the relevance order and
-`sesman-linked-sessions' lead the list."
+(defun sesman-sessions (system &optional sort type cxt-types)
+  "Return a list of sessions registered with SYSTEM.
+When TYPE is either 'all or nil return all sessions registered with system, when
+'linked, only linked sessions to the current context, when 'friendly return only
+friendly sessions. If SORT is non-nil, sessions are sorted in the relevance
+order with linked sessions leading the list. CXT-TYPES is a list of context
+types to consider for linked sessions."
   (let ((system (or system (sesman--system))))
-    (if sort
-        (delete-dups
-         (append (sesman-linked-sessions system)
-                 (sesman--all-system-sessions system t)))
-      (sesman--all-system-sessions system))))
-
-(defun sesman-linked-sessions (system &optional cxt-types)
-  "Return a list of SYSTEM sessions linked in current context.
-CXT-TYPES is a list of context types to consider.  Defaults to the
-list returned from `sesman-context-types'."
-  (let* ((system (or system (sesman--system)))
-         (cxt-types (or cxt-types (sesman-context-types system))))
-    ;; just in case some links are lingering due to user errors
-    (sesman--clear-links)
-    (delete-dups
-     (mapcar (lambda (assoc)
-               (gethash (car assoc) sesman-sessions-hashmap))
-             (sesman-current-links system nil cxt-types)))))
-
-(defun sesman-friendly-sessions (system &optional sort)
-  "Return a list of \"friendly\" sessions for the current context.
-The definition of friendly sessions is SYSTEM dependent but usually means
-sessions running in dependency projects. When SORT is non-nil, also sort the
-sessions by relevance."
-  (let ((sessions (seq-filter (lambda (ses) (sesman-friendly-session-p system ses))
-                              (sesman--all-system-sessions system))))
-    (if sort
-        (sesman--sort-sessions system sessions)
-      sessions)))
+    (cond
+     ((eq type 'linked)
+      (sesman--linked-sessions system sort cxt-types))
+     ((eq type 'friendly)
+      (sesman--friendly-sessions system sort))
+     ((memq type '(all nil))
+      (if sort
+          (delete-dups
+           (append (sesman--linked-sessions system t cxt-types)
+                   (sesman--all-system-sessions system t)))
+        (sesman--all-system-sessions system)))
+     (t (error "Invalid session TYPE argument %s" type)))))
 
 (defun sesman-current-sessions (system &optional cxt-types)
   "Return a list of SYSTEM sessions active in the current context.
-If `sesman-use-friendly-sessions' current sessions consist of
-`sesman-linked-sessions' and `sesman-friendly-sessions', otherwise only of
-linked sessions. CXT-TYPES is a list of context types to consider. Defaults to
-the list returned from `sesman-context-types'."
+Sessions are ordered by the relevance order and linked sessions come first. If
+`sesman-use-friendly-sessions' current sessions consist of linked and friendly
+sessions, otherwise only of linked sessions. CXT-TYPES is a list of context
+types to consider. Defaults to the list returned from `sesman-context-types'."
   (if sesman-use-friendly-sessions
       (delete-dups
-       (append (sesman-linked-sessions system cxt-types)
-               (sesman-friendly-sessions system 'sort)))
-    (sesman-linked-sessions system cxt-types)))
+       (append (sesman--linked-sessions system cxt-types)
+               (sesman--friendly-sessions system 'sort)))
+    (sesman--linked-sessions system cxt-types)))
 
 (defun sesman-has-sessions-p (system)
   "Return t if there is at least one session registered with SYSTEM."
@@ -658,14 +661,13 @@ return a list of sessions, otherwise a single session."
 
 (defun sesman-current-session (system &optional cxt-types)
   "Get the most relevant current session for the SYSTEM.
-CXT-TYPES is a list of context types to consider. See `sesman-current-sessions'
-for further details."
-  (or (car (sesman-linked-sessions system cxt-types))
-      (car (sesman-friendly-sessions system 'sort))))
+CXT-TYPES is a list of context types to consider."
+  (or (car (sesman--linked-sessions system cxt-types))
+      (car (sesman--friendly-sessions system 'sort))))
 
 (defun sesman-ensure-session (system &optional cxt-types)
   "Get the most relevant linked session for SYSTEM or throw if none exists.
-CXT-TYPES is as in `sesman-linked-sessions'."
+CXT-TYPES is a list of context types to consider."
   (or (sesman-current-session system cxt-types)
       (user-error "No linked %s sessions" system)))
 
@@ -854,7 +856,6 @@ session (list SESSION-NAME OBJECT)."
           (sesman-register system (list session-name object))
         (error "%s session '%s' does not exist"
                (sesman--cap-system-name system) session-name)))))
-
 
 (defun sesman-remove-object (system session-name object &optional auto-unregister no-error)
   "Remove (destructively) OBJECT from session SESSION-NAME of SYSTEM.
