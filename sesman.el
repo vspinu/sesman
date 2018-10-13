@@ -973,6 +973,8 @@ If CXT-TYPES is non-nil, only check relevance for those contexts."
   (seq-some #'sesman-relevant-link-p
             (sesman-links system session cxt-types)))
 
+(define-obsolete-function-alias 'sesman-linked-sessions 'sesman--linked-sessions "v0.3.2")
+
 (provide 'sesman)
 
 ;;; sesman.el ends here
