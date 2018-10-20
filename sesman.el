@@ -498,14 +498,14 @@ buffer."
     ["Show Session Info" sesman-info]
     "--"
     ["Start" sesman-start]
-    ["Restart" sesman-restart :active (sesman-connected-p)]
-    ["Quit" sesman-quit :active (sesman-connected-p)]
+    ["Restart" sesman-restart :active (sesman-current-session (sesman--system))]
+    ["Quit" sesman-quit :active (sesman-current-session (sesman--system))]
     "--"
-    ["Link with Buffer" sesman-link-with-buffer :active (sesman-connected-p)]
-    ["Link with Directory" sesman-link-with-directory :active (sesman-connected-p)]
-    ["Link with Project" sesman-link-with-project :active (sesman-connected-p)]
+    ["Link with Buffer" sesman-link-with-buffer :active (sesman-current-session (sesman--system))]
+    ["Link with Directory" sesman-link-with-directory :active (sesman-current-session (sesman--system))]
+    ["Link with Project" sesman-link-with-project :active (sesman-current-session (sesman--system))]
     "--"
-    ["Unlink" sesman-unlink :active (sesman-connected-p)])
+    ["Unlink" sesman-unlink :active (sesman-current-session (sesman--system))])
   "Sesman Menu.")
 
 (defun sesman-install-menu (map)
@@ -608,6 +608,18 @@ types to consider. Defaults to the list returned from `sesman-context-types'."
                (sesman--friendly-sessions system 'sort)))
     (sesman--linked-sessions system 'sort cxt-types)))
 
+(defun sesman-current-session (system &optional cxt-types)
+  "Get the most relevant current session for the SYSTEM.
+CXT-TYPES is a list of context types to consider."
+  (or (car (sesman--linked-sessions system 'sort cxt-types))
+      (car (sesman--friendly-sessions system 'sort))))
+
+(defun sesman-ensure-session (system &optional cxt-types)
+  "Get the most relevant linked session for SYSTEM or throw if none exists.
+CXT-TYPES is a list of context types to consider."
+  (or (sesman-current-session system cxt-types)
+      (user-error "No linked %s sessions" system)))
+
 (defun sesman-has-sessions-p (system)
   "Return t if there is at least one session registered with SYSTEM."
   (let ((system (or system (sesman--system)))
@@ -658,18 +670,6 @@ return a list of sessions, otherwise a single session."
       (let* ((sym (cdr (assoc sel syms)))
              (ses (assoc sym sessions)))
         (if ask-all (list ses) ses))))))
-
-(defun sesman-current-session (system &optional cxt-types)
-  "Get the most relevant current session for the SYSTEM.
-CXT-TYPES is a list of context types to consider."
-  (or (car (sesman--linked-sessions system 'sort cxt-types))
-      (car (sesman--friendly-sessions system 'sort))))
-
-(defun sesman-ensure-session (system &optional cxt-types)
-  "Get the most relevant linked session for SYSTEM or throw if none exists.
-CXT-TYPES is a list of context types to consider."
-  (or (sesman-current-session system cxt-types)
-      (user-error "No linked %s sessions" system)))
 
 (defvar sesman--cxt-abbrevs '(buffer "buf" project "proj" directory "dir"))
 (defun sesman--format-context (cxt-type cxt-val extra-face)
