@@ -42,6 +42,7 @@
 (require 'cl-generic)
 (require 'seq)
 (require 'subr-x)
+(require 'vc)
 
 (defgroup sesman nil
   "Generic Session Manager."
@@ -71,6 +72,21 @@ sessions running in dependent projects."
   :group 'sesman
   :type 'boolean
   :package-version '(sesman . "0.3.2"))
+
+(defcustom sesman-follow-symlinks 'auto
+  "This variable determines whether symlinks should be followed.
+nil - Don't follow symlinks - use `expand-file-name' for expanding file paths.
+t - Follow symlinks - use `file-truename' for expanding file paths.
+'auto - Don't follow symlink unless it's under version control and
+`vc-follow-link' has nil value. Or `find-file-visit-truename' is non-nil."
+  :group 'sesman
+  :type '(choice (const :tag "Behave like `find-file'" auto)
+                 (const :tag "Don't follow symlinks"   nil)
+                 (const :tag "Follow symlinks"         t))
+  :package-version '(sesman . "0.3.2"))
+(put 'sesman-follow-symlinks
+     'safe-local-variable
+     (lambda (x) (memq x '(auto nil t))))
 
 ;; (defcustom sesman-disambiguate-by-relevance t
 ;;   "If t choose most relevant session in ambiguous situations, otherwise ask.
@@ -319,6 +335,16 @@ If SORT is non-nil, sort in relevance order."
 (defun sesman--lnk-value (lnk)
   (nth 2 lnk))
 
+(defun sesman--follow-symlink-p (filename)
+  "FILENAME predicate that tries to predict `find-file' behavior.
+It returns t if `find-file' will follow FILENAME symlink and nil if not."
+  (or find-file-visit-truename
+      (and vc-follow-symlinks
+           (let ((truename (file-truename filename)))
+             (and truename
+                  (not (equal truename filename))
+                  (vc-backend truename))))))
+
 
 ;;; User Interface
 
@@ -445,7 +471,7 @@ PROJECT defaults to current project. On universal argument, or if PROJECT is
                      (or project (sesman-project system))))))
     (sesman--link-session-interactively session 'project project)))
 
- ;;;###autoload
+;;;###autoload
 (defun sesman-link-with-least-specific (&optional session)
   "Ask for SESSION and link with the least specific context available.
 Normally the least specific context is the project. If not in a project, link
@@ -917,8 +943,12 @@ buffers."
 (defvar sesman--path-cache (make-hash-table :test #'equal))
 ;; path caching because file-truename is very slow
 (defun sesman--expand-path (path)
-  (or (gethash path sesman--path-cache)
-      (puthash path (file-truename path) sesman--path-cache)))
+  (if (or (eq sesman-follow-symlinks t)
+          (and (eq sesman-follow-symlinks 'auto)
+               (sesman--follow-symlink-p path)))
+   (or (gethash path sesman--path-cache)
+       (puthash path (file-truename path) sesman--path-cache))
+   (expand-file-name path)))
 
 (cl-defgeneric sesman-context (_cxt-type _system)
   "Given SYSTEM and context type CXT-TYPE return the context.")
