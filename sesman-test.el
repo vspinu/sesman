@@ -245,6 +245,57 @@
 
    (should (= (length sesman-links-alist) 6))))
 
+
+;;; FILE PATHS
+
+(cl-defmethod sesman-project ((system (eql C)))
+  (directory-file-name default-directory))
+
+(ert-deftest sesman-symlinked-projects-tests ()
+  (let* ((dir1 (make-temp-file "1-" 'dir))
+         (dir2 (make-temp-file "2-" 'dir))
+         (dir1-link (format "%s/dir1" dir2 dir1)))
+    ;; dir1 link in dir2
+    (shell-command (format "ln -s %s %s"  dir1 dir1-link))
+
+    (let ((sesman-follow-symlinks nil)
+          (vc-follow-symlinks t))
+      (should (equal (sesman--expand-path dir1-link)
+                     dir1-link)))
+    (let ((sesman-follow-symlinks t)
+          (vc-follow-symlinks nil))
+      (should (equal (sesman--expand-path dir1-link)
+                     dir1)))
+    (let ((sesman-follow-symlinks 'vc)
+          (vc-follow-symlinks t))
+      (should (equal (sesman--expand-path dir1-link)
+                     dir1)))
+    (let ((sesman-follow-symlinks 'vc)
+          (vc-follow-symlinks nil))
+      (should (equal (sesman--expand-path dir1-link)
+                     dir1-link)))
+
+    (let ((sesman-follow-symlinks nil)
+          (default-directory dir1-link))
+      (should (equal (sesman-context 'project 'C)
+                     dir1-link)))
+    (let ((sesman-follow-symlinks t)
+          (default-directory dir1-link))
+      (should (equal (sesman-context 'project 'C)
+                     dir1)))
+    (let ((sesman-follow-symlinks 'vc)
+          (vc-follow-symlinks t)
+          (default-directory dir1-link))
+      (should (equal (sesman-context 'project 'C)
+                     dir1)))
+    (let ((sesman-follow-symlinks 'vc)
+          (vc-follow-symlinks nil)
+          (default-directory dir1-link))
+      (should (equal (sesman-context 'project 'C)
+                     dir1-link)))
+
+    (delete-directory dir1 t)
+    (delete-directory dir2 t)))
 
 (provide 'sesman-test)
 
