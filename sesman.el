@@ -184,11 +184,6 @@ Can be either a symbol, or a function returning a symbol.")
                        (capitalize cxt-name)
                        system))))))
 
-(defun sesman--expand-path-maybe (obj)
-  (if (stringp obj)
-      (expand-file-name obj)
-    obj))
-
 ;; FIXME: incorporate `sesman-abbreviate-paths'
 (defun sesman--abbrev-path-maybe (obj)
   (if (stringp obj)
@@ -768,13 +763,15 @@ context. If CXT-TYPE is non-nil, and CXT-VAL is not given, retrieve it with
   (let* ((ses-name (or (car-safe session)
                        (error "SESSION must be a headed list")))
          (cxt-val (or cxt-val
-                      (sesman--expand-path-maybe
-                       (or (if cxt-type
-                               (sesman-context cxt-type system)
-                             (let ((cxt (sesman--least-specific-context system)))
-                               (setq cxt-type (car cxt))
-                               (cdr cxt)))
-                           (error "No local context of type %s" cxt-type)))))
+                      (or (if cxt-type
+                              (sesman-context cxt-type system)
+                            (let ((cxt (sesman--least-specific-context system)))
+                              (setq cxt-type (car cxt))
+                              (cdr cxt)))
+                          (error "No local context of type %s" cxt-type))))
+         (cxt-val (if (stringp cxt-val)
+                      (expand-file-name cxt-val)
+                    cxt-val))
          (key (cons system ses-name))
          (link (list key cxt-type cxt-val)))
     (if (member cxt-type sesman-single-link-context-types)
