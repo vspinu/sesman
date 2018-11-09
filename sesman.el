@@ -543,10 +543,8 @@ instead."
   (list :objects (cdr session)))
 
 (cl-defgeneric sesman-project (_system)
-  "Retrieve project root for SYSTEM in directory DIR.
-DIR defaults to `default-directory'. Return a string or nil if no project has
-been found."
-  nil)
+  "Retrieve project root current directory (`default-directory') for SYSTEM.
+Return a string or nil if no project has been found." nil)
 
 (cl-defgeneric sesman-more-relevant-p (_system session1 session2)
   "Return non-nil if SESSION1 should be sorted before SESSION2.
@@ -938,6 +936,7 @@ buffers."
                ;; project-roots fails on nil and doesn't work on custom `('foo .
                ;; "path/to/project"). So, use vc as a fallback and don't use project.el at
                ;; all for now.
+               ;; NB: `vc-root-dir' doesn't work from symlinked files. Emacs Bug?
                (vc-root-dir))))
     (when proj
       (sesman--expand-path proj))))
