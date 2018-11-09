@@ -921,13 +921,12 @@ buffers."
                           -1)))
                     (buffer-list)))))
 
-
-
-;;; Contexts
-
 ;; path caching because file-truename is very slow
 (defvar sesman--path-cache (make-hash-table :test #'equal))
-(defun sesman--expand-path (path)
+(defun sesman-expand-path (path)
+  "Expand PATH with optionally follow symlinks.
+Whether symlinks are followed is controlled by `sesman-follow-symlinks' custom
+variable."
   (if sesman-follow-symlinks
       (let ((true-name (or (gethash path sesman--path-cache)
                            (puthash path (file-truename path) sesman--path-cache))))
@@ -938,6 +937,9 @@ buffers."
           (expand-file-name path)))
     (expand-file-name path)))
 
+
+;;; Contexts
+
 (cl-defgeneric sesman-context (_cxt-type _system)
   "Given SYSTEM and context type CXT-TYPE return the context.")
 (cl-defmethod sesman-context ((_cxt-type (eql buffer)) _system)
@@ -945,10 +947,10 @@ buffers."
   (current-buffer))
 (cl-defmethod sesman-context ((_cxt-type (eql directory)) _system)
   "Return current directory."
-  (sesman--expand-path default-directory))
+  (sesman-expand-path default-directory))
 (cl-defmethod sesman-context ((_cxt-type (eql project)) system)
   "Return current project."
-  (let* ((default-directory (sesman--expand-path default-directory))
+  (let* ((default-directory (sesman-expand-path default-directory))
          (proj (or
                 (sesman-project (or system (sesman--system)))
                 ;; Normally we would use (project-roots (project-current)) but currently
@@ -968,13 +970,13 @@ buffers."
 (cl-defmethod sesman-relevant-context-p ((_cxt-type (eql directory)) dir)
   "Non-nil if DIR is the parent or equals the `default-directory'."
   (when (and dir default-directory)
-    (string-match-p (concat "^" (sesman--expand-path dir))
-                    (sesman--expand-path default-directory))))
+    (string-match-p (concat "^" (sesman-expand-path dir))
+                    (sesman-expand-path default-directory))))
 (cl-defmethod sesman-relevant-context-p ((_cxt-type (eql project)) proj)
   "Non-nil if PROJ is the parent or equal to the `default-directory'."
   (when (and proj default-directory)
-    (string-match-p (concat "^" (sesman--expand-path proj))
-                    (sesman--expand-path default-directory))))
+    (string-match-p (concat "^" (sesman-expand-path proj))
+                    (sesman-expand-path default-directory))))
 
 (defun sesman-relevant-link-p (link &optional cxt-types)
   "Return non-nil if LINK is relevant to the current context.
