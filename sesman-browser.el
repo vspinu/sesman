@@ -228,7 +228,7 @@ If NO-SWITCH is non-nil, only display the buffer."
   (interactive)
   (sesman-goto 'no-switch))
 
-(defun sesman-browser--sensor-function (&rest ignore)
+(defun sesman-browser--sensor-function (&rest _ignore)
   (let ((beg (or (when (get-text-property (point) :sesman-stop)
                    (if (get-text-property (1- (point)) :sesman-stop)
                        (previous-single-char-property-change (point) :sesman-stop)
@@ -237,9 +237,10 @@ If NO-SWITCH is non-nil, only display the buffer."
         (end (next-single-char-property-change (point) :sesman-stop)))
     (move-overlay sesman-browser--stop-overlay beg end)
     (when window-system
-      (when-let* ((beg (get-text-property (point) :sesman-fragment-beg))
-                  (end (get-text-property (point) :sesman-fragment-end)))
-        (move-overlay sesman-browser--section-overlay beg end)))))
+      (let ((beg (get-text-property (point) :sesman-fragment-beg))
+            (end (get-text-property (point) :sesman-fragment-end)))
+        (when (and beg end)
+          (move-overlay sesman-browser--section-overlay beg end))))))
 
 
 ;;; Sesman UI
