@@ -254,9 +254,11 @@
 (ert-deftest sesman-symlinked-projects-tests ()
   (let* ((dir1 (make-temp-file "1-" 'dir))
          (dir2 (make-temp-file "2-" 'dir))
-         (dir1-link (format "%s/dir1" dir2 dir1)))
+         (dir1-link (format "%s/dir1" dir2)))
+
     ;; dir1 link in dir2
-    (shell-command (format "ln -s %s %s"  dir1 dir1-link))
+    (should (equal (shell-command (format "ln -s %s %s" dir1 dir1-link))
+                   0))
 
     (let ((sesman-follow-symlinks nil)
           (vc-follow-symlinks t))

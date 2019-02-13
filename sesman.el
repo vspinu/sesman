@@ -926,16 +926,17 @@ buffers."
 (defun sesman-expand-path (path)
   "Expand PATH with optionally follow symlinks.
 Whether symlinks are followed is controlled by `sesman-follow-symlinks' custom
-variable."
-  (if sesman-follow-symlinks
-      (let ((true-name (or (gethash path sesman--path-cache)
-                           (puthash path (file-truename path) sesman--path-cache))))
-        (if (or (eq sesman-follow-symlinks t)
-                vc-follow-symlinks)
-            true-name
-          ;; sesman-follow-symlinks is 'vc but vc-follow-symlinks is nil
-          (expand-file-name path)))
-    (expand-file-name path)))
+variable. Always return the expansion without the trailing directory slash."
+  (directory-file-name
+   (if sesman-follow-symlinks
+       (let ((true-name (or (gethash path sesman--path-cache)
+                            (puthash path (file-truename path) sesman--path-cache))))
+         (if (or (eq sesman-follow-symlinks t)
+                 vc-follow-symlinks)
+             true-name
+           ;; sesman-follow-symlinks is 'vc but vc-follow-symlinks is nil
+           (expand-file-name path)))
+     (expand-file-name path))))
 
 
 ;;; Contexts
