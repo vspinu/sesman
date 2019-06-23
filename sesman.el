@@ -282,7 +282,8 @@ If SORT is non-nil, sort in relevance order."
          (session (gethash (car link) sesman-sessions-hashmap)))
     (format "%s(%s) -> %s [%s]"
             (sesman--lnk-context-type link)
-            (propertize (sesman--abbrev-path-maybe (sesman--lnk-value link)) 'face 'bold)
+            (propertize (format "%s" (sesman--abbrev-path-maybe (sesman--lnk-value link)))
+                        'face 'bold)
             (propertize (sesman--lnk-session-name link) 'face 'bold)
             (if session
                 (sesman--format-session-objects system session)
