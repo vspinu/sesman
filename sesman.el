@@ -266,7 +266,7 @@ If SORT is non-nil, sort in relevance order."
                            (mapcar (lambda (x) (format "%s" x))
                                    (plist-get info :objects)))))
           (mapconcat (lambda (str)
-                       (replace-regexp-in-string ses-name "%%s" str nil t))
+                       (replace-regexp-in-string ses-name "..." str nil t))
                      strings sep))
       (format "%s" info))))
 
