@@ -21,7 +21,7 @@ Sesman is composed of two parts, user interface, available as a sesman map and m
 
 Consists of 
 
- - lifecycle management commands (`sesman-start`, `sesman-kill` and `sesman-restart`), and
+ - lifecycle management commands (`sesman-start`, `sesman-quit` and `sesman-restart`), and
  - association management commands (`sesman-link-with-buffer`, `sesman-link-with-directory`, `sesman-link-with-project` and `sesman-unlink`). 
 
 From the user's prospective the work-flow is as follow. Start a session, either with `sesman-start` (`C-c C-s C-s`) or some of the system specific commands (`run-xyz`, `xyz-jack-in` etc). On startup each session is automatically associated with the least specific context (commonly a project). In the most common case the user has only one session open per project. In such case, no ambiguity arises when a system retrieves the current session. If multiple sessions are associated with the current context the ambiguity is automatically resolved through the system specific relevance mechanism. Usually it is the most recently used session.
@@ -33,7 +33,7 @@ By default links with projects and directories are many-to-many in the sense tha
 Consists of several generics, of which only first three are strictly required:
 
   - `sesman-start-session`
-  - `sesman-kill-session`
+  - `sesman-quit-session`
   - `sesman-restart-session`
   - `sesman-session-info`
   - `sesman-context-types`
