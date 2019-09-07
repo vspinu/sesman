@@ -70,28 +70,53 @@ Currently can be either 'name  or 'relevance."
   "Prefix keymap for sesman commands from sesman browser.")
 
 (defvar sesman-browser-mode-map
-  (let ((sesman-browser-mode-map (make-sparse-keymap)))
-    (define-key sesman-browser-mode-map (kbd "n") #'sesman-browser-vertical-next)
-    (define-key sesman-browser-mode-map (kbd "p") #'sesman-browser-vertical-prev)
-    (define-key sesman-browser-mode-map (kbd "f") #'sesman-browser-forward)
-    (define-key sesman-browser-mode-map (kbd "b") #'sesman-browser-backward)
-    (define-key sesman-browser-mode-map [remap forward-paragraph] #'sesman-browser-session-next)
-    (define-key sesman-browser-mode-map [remap backward-paragraph] #'sesman-browser-session-prev)
-    (define-key sesman-browser-mode-map (kbd "C-M-n") #'sesman-browser-session-next)
-    (define-key sesman-browser-mode-map (kbd "C-M-p") #'sesman-browser-session-prev)
-    (define-key sesman-browser-mode-map (kbd "<tab>") #'sesman-browser-forward)
-    (define-key sesman-browser-mode-map (kbd "<backtab>") #'sesman-browser-backward)
-    (define-key sesman-browser-mode-map (kbd "<RET>") #'sesman-goto)
-    (define-key sesman-browser-mode-map (kbd "o") #'sesman-show)
-    (define-key sesman-browser-mode-map (kbd "t") #'sesman-browser-toggle-sort)
-    (define-key sesman-browser-mode-map (kbd "S") #'sesman-browser-toggle-sort)
-    (define-key sesman-browser-mode-map (kbd "l b") #'sesman-browser-link-with-buffer)
-    (define-key sesman-browser-mode-map (kbd "l d") #'sesman-browser-link-with-directory)
-    (define-key sesman-browser-mode-map (kbd "l p") #'sesman-browser-link-with-project)
-    (define-key sesman-browser-mode-map (kbd "u") #'sesman-browser-unlink)
-    (define-key sesman-browser-mode-map (kbd "s") 'sesman-browser-map)
-    (define-key sesman-browser-mode-map (kbd "C-c C-s") 'sesman-browser-map)
-    sesman-browser-mode-map)
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "n") #'sesman-browser-vertical-next)
+    (define-key map (kbd "p") #'sesman-browser-vertical-prev)
+    (define-key map (kbd "f") #'sesman-browser-forward)
+    (define-key map (kbd "b") #'sesman-browser-backward)
+    (define-key map [remap forward-paragraph] #'sesman-browser-session-next)
+    (define-key map [remap backward-paragraph] #'sesman-browser-session-prev)
+    (define-key map (kbd "C-M-n") #'sesman-browser-session-next)
+    (define-key map (kbd "C-M-p") #'sesman-browser-session-prev)
+    (define-key map (kbd "<tab>") #'sesman-browser-forward)
+    (define-key map (kbd "<backtab>") #'sesman-browser-backward)
+    (define-key map (kbd "<RET>") #'sesman-goto)
+    (define-key map (kbd "o") #'sesman-show)
+    (define-key map (kbd "t") #'sesman-browser-toggle-sort)
+    (define-key map (kbd "S") #'sesman-browser-toggle-sort)
+    (define-key map (kbd "l b") #'sesman-browser-link-with-buffer)
+    (define-key map (kbd "l d") #'sesman-browser-link-with-directory)
+    (define-key map (kbd "l p") #'sesman-browser-link-with-project)
+    (define-key map (kbd "u") #'sesman-browser-unlink)
+    (define-key map (kbd "s") 'sesman-browser-map)
+    (define-key map (kbd "C-c C-s") 'sesman-browser-map)
+    ;; XXX what to do for map...
+    (easy-menu-define sesman-browser-mode-map map
+      "Sesman Browser"
+      '("SesmanBrowser"
+        ["Next section / row" sesman-browser-vertical-next]
+        ["Previous section / row" sesman-browser-vertical-prev]
+        "--"
+        ["Next button" sesman-browser-forward]
+        ["Previous button" sesman-browser-backward]
+        "--"
+        ["Next session" sesman-browser-session-next]
+        ["Previous session" sesman-browser-session-prev]
+        "--"
+        ["Goto buffer" sesman-goto]
+        ["Show buffer" sesman-show]
+        "--"
+        ["Toggle sort" sesman-browser-toggle-sort]
+        "--"
+        ["Link with Buffer" sesman-browser-link-with-buffer]
+        ["Link with Directory" sesman-browser-link-with-directory]
+        ["Link with Project" sesman-browser-link-with-project]
+        "--"
+        ["Unlink" sesman-browser-unlink]
+        "--"
+        ["Refresh View" revert-buffer]))
+    map)
   "Local keymap in `sesman-browser-mode'.")
 
 
