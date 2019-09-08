@@ -91,30 +91,25 @@ Currently can be either 'name  or 'relevance."
     (define-key map (kbd "u") #'sesman-browser-unlink)
     (define-key map (kbd "s") 'sesman-browser-map)
     (define-key map (kbd "C-c C-s") 'sesman-browser-map)
-    ;; XXX what to do for map...
     (easy-menu-define sesman-browser-mode-map map
       "Sesman Browser"
       '("SesmanBrowser"
-        ["Next section / row" sesman-browser-vertical-next]
-        ["Previous section / row" sesman-browser-vertical-prev]
-        "--"
+        ["Next row" sesman-browser-vertical-next]
+        ["Previous row" sesman-browser-vertical-prev]
         ["Next button" sesman-browser-forward]
         ["Previous button" sesman-browser-backward]
-        "--"
         ["Next session" sesman-browser-session-next]
         ["Previous session" sesman-browser-session-prev]
         "--"
         ["Goto buffer" sesman-goto]
         ["Show buffer" sesman-show]
         "--"
-        ["Toggle sort" sesman-browser-toggle-sort]
-        "--"
         ["Link with Buffer" sesman-browser-link-with-buffer]
         ["Link with Directory" sesman-browser-link-with-directory]
         ["Link with Project" sesman-browser-link-with-project]
-        "--"
         ["Unlink" sesman-browser-unlink]
         "--"
+        ["Toggle sort" sesman-browser-toggle-sort]
         ["Refresh View" revert-buffer]))
     map)
   "Local keymap in `sesman-browser-mode'.")
