@@ -518,7 +518,7 @@ buffer."
 
 (defun sesman-install-menu (map)
   "Install `sesman-menu' into MAP."
-  (easy-menu-do-define 'seman-menu-open
+  (easy-menu-do-define 'sesman-menu-open
                        map
                        (get 'sesman-menu 'variable-documentation)
                        sesman-menu))
