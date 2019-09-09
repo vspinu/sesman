@@ -512,8 +512,9 @@ buffer."
     ["Link with Buffer" sesman-link-with-buffer :active (sesman-current-session (sesman--system))]
     ["Link with Directory" sesman-link-with-directory :active (sesman-current-session (sesman--system))]
     ["Link with Project" sesman-link-with-project :active (sesman-current-session (sesman--system))]
+    ["Unlink" sesman-unlink :active (sesman-current-session (sesman--system))]
     "--"
-    ["Unlink" sesman-unlink :active (sesman-current-session (sesman--system))])
+    ["Browser" sesman-browser :active (sesman-current-session (sesman--system))])
   "Sesman Menu.")
 
 (defun sesman-install-menu (map)
