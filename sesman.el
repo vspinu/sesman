@@ -473,6 +473,14 @@ buffer."
           (sesman--ask-for-link "Unlink: " links 'ask-all)))
   (run-hooks 'sesman-post-command-hook))
 
+;;;###autoload
+(defun sesman-unlink-all-context ()
+  "Unlink all sesman sessions in current context."
+  (interactive)
+  (mapc #'sesman--unlink
+        (sesman-current-links 'CIDER))
+  (run-hooks 'sesman-post-command-hook))
+
 (declare-function sesman-browser "sesman-browser")
 ;;;###autoload (autoload 'sesman-map "sesman" "Session management prefix keymap." t 'keymap)
 (defvar sesman-map
