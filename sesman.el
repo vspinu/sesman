@@ -474,7 +474,7 @@ buffer."
   (run-hooks 'sesman-post-command-hook))
 
 ;;;###autoload
-(defun sesman-unlink-all-context ()
+(defun sesman-unlink-all ()
   "Unlink all sesman sessions in current context."
   (interactive)
   (mapc #'sesman--unlink
