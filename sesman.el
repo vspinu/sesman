@@ -478,7 +478,7 @@ buffer."
   "Unlink all sesman sessions in current context."
   (interactive)
   (mapc #'sesman--unlink
-        (sesman-current-links 'CIDER))
+        (sesman-current-links (sesman--system)))
   (run-hooks 'sesman-post-command-hook))
 
 (declare-function sesman-browser "sesman-browser")
