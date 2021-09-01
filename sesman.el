@@ -463,14 +463,18 @@ buffer."
   (sesman--link-session-interactively session nil nil))
 
 ;;;###autoload
-(defun sesman-unlink ()
-  "Break any of the previously created links."
+(defun sesman-unlink (&optional links)
+  "Break any of the previously created links or break LINKS if non-nil.
+
+Break all links with prefix argument."
   (interactive)
-  (let* ((system (sesman--system))
-         (links (or (sesman-current-links system)
-                    (user-error "No %s links found" system))))
-    (mapc #'sesman--unlink
-          (sesman--ask-for-link "Unlink: " links 'ask-all)))
+  (mapc #'sesman--unlink (or (when current-prefix-arg
+                               (sesman-current-links (sesman--system)))
+                             links
+                             (sesman--ask-for-link "Unlink: "
+                                                   (or (sesman-current-links (sesman--system))
+                                                       (user-error "No %s links found" (sesman--system)))
+                                                   'ask-all)))
   (run-hooks 'sesman-post-command-hook))
 
 (declare-function sesman-browser "sesman-browser")
