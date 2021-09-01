@@ -464,9 +464,9 @@ buffer."
 
 ;;;###autoload
 (defun sesman-unlink (&optional links)
-  "Break any of the previously created links or break LINKS if non-nil.
-
-Break all links with prefix argument."
+  "Break sesman LINKS.
+If LINKS is nil, ask interactively for a link. With a prefix argument break all
+links."
   (interactive)
   (mapc #'sesman--unlink (or (when current-prefix-arg
                                (sesman-current-links (sesman--system)))
