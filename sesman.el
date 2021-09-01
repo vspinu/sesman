@@ -192,12 +192,14 @@ Can be either a symbol, or a function returning a symbol.")
         (funcall sesman-system)
       sesman-system)))
 
-(defun sesman--system ()
+(defun sesman-get-system ()
   (if sesman-system
       (if (functionp sesman-system)
           (funcall sesman-system)
         sesman-system)
     (error "No `sesman-system' in buffer `%s'" (current-buffer))))
+
+(defalias 'sesman--system #'sesman-get-system)
 
 (defun sesman--linked-sessions (system &optional sort cxt-types)
   (let* ((system (or system (sesman--system)))
