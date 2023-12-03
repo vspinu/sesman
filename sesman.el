@@ -122,9 +122,8 @@ and cxt-type must be symbols.")
 Can be either a symbol, or a function returning a symbol.")
 (put 'sesman-system 'permanent-local 't)
 
-
 
-;; Internal Utilities
+;;; Internal Utilities
 
 (defun sesman--on-C-u-u-sessions (system which)
   (cond
