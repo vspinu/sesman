@@ -32,8 +32,8 @@
 ;;; Commentary:
 ;;
 ;; Sesman provides facilities for session management and interactive session
-;; association with the current contexts (project, directory, buffers etc).  See
-;; project's readme for more details.
+;; association with the current contexts (project, directory, buffers etc).
+;; See project's readme for more details.
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -86,10 +86,10 @@ When nil, don't follow symlinks. When 'vc, follow symlinks only when
 
 ;; (defcustom sesman-disambiguate-by-relevance t
 ;;   "If t choose most relevant session in ambiguous situations, otherwise ask.
-;; Ambiguity arises when multiple sessions are associated with current context.  By
-;; default only projects could be associated with multiple sessions.  See
-;; `sesman-single-link-contexts' in order to change that.  Relevance is decided by
-;; system's implementation, see `sesman-more-relevant-p'."
+;; Ambiguity arises when multiple sessions are associated with current context.
+;; By default only projects could be associated with multiple sessions.  See
+;; `sesman-single-link-contexts' in order to change that.  Relevance is decided
+;; by system's implementation, see `sesman-more-relevant-p'."
 ;;   :group 'sesman
 ;;   :type 'boolean)
 
