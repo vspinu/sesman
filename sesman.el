@@ -75,7 +75,7 @@ sessions running in dependent projects."
 
 (defcustom sesman-follow-symlinks 'vc
   "When non-nil, follow symlinks during the file expansion.
-When nil, don't follow symlinks. When 'vc, follow symlinks only when
+When nil, don't follow symlinks. When \='vc, follow symlinks only when
 `vc-follow-symlinks' is non-nil. When t, always follow symlinks."
   :group 'sesman
   :type '(choice (const :tag "Comply with `vc-follow-symlinks'" vc)
@@ -154,7 +154,7 @@ Can be either a symbol, or a function returning a symbol.")
 
 (defun sesman--least-specific-context (system)
   (seq-some (lambda (ctype)
-              (when-let (val (sesman-context ctype system))
+              (when-let* ((val (sesman-context ctype system)))
                 (cons ctype val)))
             (reverse (sesman-context-types system))))
 
@@ -347,8 +347,8 @@ If SORT is non-nil, sort in relevance order."
 (defun sesman-restart (&optional which)
   "Restart sesman session.
 When WHICH is nil, restart the current session; when a single universal
-argument or 'linked, restart all linked sessions; when a double universal
-argument, t or 'all, restart all sessions. For programmatic use, WHICH can also
+argument or \='linked, restart all linked sessions; when a double universal
+argument, t or \='all, restart all sessions. For programmatic use, WHICH can also
 be a session or a name of the session, in which case that session is restarted."
   (interactive "P")
   (let* ((system (sesman--system))
@@ -368,9 +368,9 @@ be a session or a name of the session, in which case that session is restarted."
 (defun sesman-quit (&optional which)
   "Terminate a Sesman session.
 When WHICH is nil, kill only the current session; when a single universal
-argument or 'linked, kill all linked sessions; when a double universal argument,
-t or 'all, kill all sessions. For programmatic use, WHICH can also be a session
-or a name of the session, in which case that session is killed."
+argument or \='linked, kill all linked sessions; when a double universal
+argument, t or \='all, kill all sessions. For programmatic use, WHICH can also
+be a session or a name of the session, in which case that session is killed."
   (interactive "P")
   (let* ((system (sesman--system))
          (sessions (sesman--on-C-u-u-sessions system which)))
@@ -414,7 +414,7 @@ sessions."
 ;;;###autoload
 (defun sesman-link-with-buffer (&optional buffer session)
   "Ask for SESSION and link with BUFFER.
-BUFFER defaults to current buffer. On universal argument, or if BUFFER is 'ask,
+BUFFER defaults to current buffer. On universal argument, or if BUFFER is \='ask,
 ask for buffer."
   (interactive "P")
   (let ((buf (if (or (eq buffer 'ask)
@@ -430,7 +430,7 @@ ask for buffer."
 ;;;###autoload
 (defun sesman-link-with-directory (&optional dir session)
   "Ask for SESSION and link with DIR.
-DIR defaults to `default-directory'. On universal argument, or if DIR is 'ask,
+DIR defaults to `default-directory'. On universal argument, or if DIR is \='ask,
 ask for directory."
   (interactive "P")
   (let ((dir (if (or (eq dir 'ask)
@@ -443,7 +443,7 @@ ask for directory."
 (defun sesman-link-with-project (&optional project session)
   "Ask for SESSION and link with PROJECT.
 PROJECT defaults to current project. On universal argument, or if PROJECT is
-'ask, ask for the project. SESSION defaults to the current session."
+\='ask, ask for the project. SESSION defaults to the current session."
   (interactive "P")
   (let* ((system (sesman--system))
          (project (expand-file-name
@@ -548,12 +548,13 @@ By default, calls `sesman-quit-session' and then
       (setcar new-session old-name))))
 
 (cl-defgeneric sesman-session-info (_system session)
-  "Return a plist with :objects key containing user \"visible\" objects.
-Optional :strings value is a list of string representations of objects. Optional
-:map key is a local keymap to place on every object in the session browser.
+  "Return a plist with :objects key containing user-visible objects for SESSION.
+Optional :strings value is a list of string representations of objects.
+Optional :map key is a local keymap to place on every object in
+the session browser.
 Optional :buffers is a list of buffers which will be used for navigation from
-the session browser. If :buffers is missing, buffers from :objects are used
-instead."
+the session browser.
+If :buffers is missing, buffers from :objects are used instead."
   (list :objects (cdr session)))
 
 (cl-defgeneric sesman-project (_system)
@@ -590,11 +591,11 @@ Contexts must be sorted from most specific to least specific."
 
 (defun sesman-sessions (system &optional sort type cxt-types)
   "Return a list of sessions registered with SYSTEM.
-When TYPE is either 'all or nil return all sessions registered with the SYSTEM,
-when 'linked, only linked to the current context sessions, when 'friendly - only
-friendly sessions. If SORT is non-nil, sessions are sorted in the relevance
-order with linked sessions leading the list. CXT-TYPES is a list of context
-types to consider for linked sessions."
+When TYPE is either \='all or nil return all sessions registered with the
+SYSTEM, when \='linked, only linked to the current context sessions, when
+\='friendly - only friendly sessions. If SORT is non-nil, sessions are sorted
+in the relevance order with linked sessions leading the list. CXT-TYPES is a
+list of context types to consider for linked sessions."
   (let ((system (or system (sesman--system))))
     (cond
      ((eq type 'linked)
@@ -958,7 +959,7 @@ variable. Always return the expansion without the trailing directory slash."
   "Return current directory."
   (sesman-expand-path default-directory))
 (cl-defmethod sesman-context ((_cxt-type (eql project)) system)
-  "Return current project."
+  "Return current project for SYSTEM."
   (let* ((default-directory (sesman-expand-path default-directory))
          (proj (or
                 (sesman-project (or system (sesman--system)))
